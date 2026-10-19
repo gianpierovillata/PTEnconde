@@ -12,7 +12,7 @@ Prueba técnica para **encodelabs**: una bandeja web ("bandeja conversacional") 
 - `Proyecto/AnalisisC4/` — carpeta prevista para los diagramas C4 (hoy vacía).
 - `Proyecto/Prompts.md` — prompts originales del usuario, no es fuente de requisitos.
 
-El repositorio es un andamiaje. **No** existen todavía frontend, `docker-compose.yml`, ADRs, tests ni CI. No asumir que existan. Sí existen el `.gitignore` raíz y `.env.example` (variables con valores falsos).
+El repositorio es un andamiaje. **No** existen todavía frontend, ADRs, tests ni CI. No asumir que existan. Sí existen el `.gitignore` raíz, `.env.example`, los Dockerfiles y `docker-compose.yml` (servicios `api` + `sqlserver`).
 
 ## Comandos
 
@@ -27,6 +27,19 @@ dotnet run   --project EncodeAssistant/encode-api/encode-api.csproj   # perfil h
 - Único endpoint mapeado actualmente: `GET /health`. OpenAPI se expone en Development.
 - No hay proyecto de tests todavía. Si se agregan, la spec los limita a **tests unitarios sobre el dominio**.
 
+## Docker
+
+`docker-compose.yml` levanta `api` + `sqlserver`. La API escucha en el contenedor en el puerto 8080 y se publica en `${API_HTTP_PORT:-5088}`; SQL Server en `1433`.
+
+```bash
+docker compose up --build            # usa el .env local (gitignored)
+docker compose --env-file .env.example config   # validar sin tocar el .env local
+```
+
+- En esta máquina, la shell del agente puede no tener cargado el grupo `docker` (`permission denied` en el socket). Encadenar con `sg docker -c "..."` o re-loguear.
+- Si se cambia `SQLSERVER_SA_PASSWORD` después del primer arranque, hay que recrear el volumen (`docker compose down -v`): SQL Server solo aplica la contraseña la primera vez.
+- `frontend`, `RabbitMQ` y `ngrok` todavía no están en el compose (ver Fase 7 de `Proyecto/PLAN.md`).
+
 ## Restricciones de arquitectura (de la spec)
 
 - Backend: .NET con **Clean Architecture** (obligatorio y criterio evaluado).
@@ -35,11 +48,11 @@ dotnet run   --project EncodeAssistant/encode-api/encode-api.csproj   # perfil h
 
 ## Entregables que faltan crear
 
-`docker-compose.yml`, `README.md` raíz con las 6 secciones que pide la spec, diagramas C4 Nivel 1 + 2 (SVG o XML de draw.io), ADR-001..003 (base de datos, tecnología de tiempo real, flujo del webhook + topología de RabbitMQ) y el documento de una página "Trabajo con IA".
+`README.md` raíz con las 6 secciones que pide la spec, diagramas C4 Nivel 1 + 2 (SVG o XML de draw.io), ADR-001..003 (base de datos, tecnología de tiempo real, flujo del webhook + topología de RabbitMQ) y el documento de una página "Trabajo con IA".
 
 ## Puntos de atención
 
-- El `.env` de la raíz contiene un token real. Ya está cubierto por el `.gitignore` raíz y figura como ignorado: **nunca** forzarlo al repo (`git add -f`). Solo se versiona `.env.example`.
-- Las variables del `.env` **todavía no las carga** la API — el cableado de configuración/entorno forma parte del trabajo pendiente de docker-compose.
+- El `.env` de la raíz tiene credenciales locales de desarrollo y está ignorado por git: **nunca** forzarlo al repo (`git add -f`). Solo se versiona `.env.example`.
+- `docker-compose.yml` ya inyecta las variables de configuración (formato `Seccion__Clave`), pero el código de `encode-api` todavía **no las consume** — el cableado de configuración queda para las próximas fases.
 - `EncodeAssistant/encode-api/encode-api.http` llama a `/weatherforecast/`, que **no está mapeado**; el record `WeatherForecast` en `Program.cs` es código sobrante de la plantilla.
 - Git está inicializado en `main` y **sin commits todavía**; todo está sin trackear.

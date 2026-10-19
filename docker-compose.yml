@@ -1,0 +1,48 @@
+# =============================================================================
+# docker compose — levanta la API y SQL Server.
+#
+# Uso:
+#   cp .env.example .env   # completar valores reales
+#   docker compose up --build
+# =============================================================================
+name: ${COMPOSE_PROJECT_NAME:-enconde-inbox}
+
+services:
+  sqlserver:
+    build:
+      context: ./docker/sqlserver
+    image: ${COMPOSE_PROJECT_NAME:-enconde-inbox}-sqlserver
+    environment:
+      MSSQL_SA_PASSWORD: ${SQLSERVER_SA_PASSWORD:?Definí SQLSERVER_SA_PASSWORD en el .env}
+    ports:
+      # Expuesto para conectarse con herramientas locales; quitar en producción.
+      - "${SQLSERVER_PORT:-1433}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - backend
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./EncodeAssistant/encode-api
+    image: ${COMPOSE_PROJECT_NAME:-enconde-inbox}-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+      # Doble guion bajo = separador de sección en la configuración de .NET.
+      ConnectionStrings__SqlServer: "Server=${SQLSERVER_HOST:-sqlserver},1433;Database=${SQLSERVER_DB:-EncodeInbox};User Id=${SQLSERVER_USER:-sa};Password=${SQLSERVER_SA_PASSWORD};TrustServerCertificate=True"
+    ports:
+      - "${API_HTTP_PORT:-5088}:8080"
+    depends_on:
+      - sqlserver
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
