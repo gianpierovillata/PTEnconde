@@ -65,7 +65,7 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 ### Fase 0 — Andamiaje y seguridad del repo
 - [x] Crear `.gitignore` raíz que ignore `.env`, `bin/`, `obj/`, `node_modules/`, artefactos de build.
 - [x] Crear `.env.example` con las variables de arriba (valores falsos).
-- [ ] Commit inicial del andamiaje.
+- [x] Commit inicial del andamiaje (`085b43b`).
 
 ### Fase 1 — Backend: estructura Clean Architecture
 - [ ] Crear proyectos `Encode.Domain`, `Encode.Application`, `Encode.Infrastructure`.
@@ -99,10 +99,13 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 - [ ] Estilo alineado a encodelabs.com.ar.
 
 ### Fase 7 — Docker y exposición
-- [ ] Dockerfiles multi-stage para API y frontend (usuario no root, imágenes livianas).
-- [ ] `docker-compose.yml` con api, frontend, SQL Server, RabbitMQ y ngrok.
-- [ ] Healthchecks, redes, volúmenes y dependencias (`depends_on` con condición healthy).
-- [ ] Verificar `docker compose up` de punta a punta.
+- [x] Dockerfile multi-stage para la API (.NET 10, usuario no root, `ASPNETCORE_URLS=http://+:8080`).
+- [x] Dockerfile para SQL Server (imagen oficial 2022, `ACCEPT_EULA` + `Developer`).
+- [x] `docker-compose.yml` con `api` + `sqlserver` (red `backend` y volumen `sqlserver-data`).
+- [x] Verificado: `docker compose up` levanta `api` y `sqlserver`; `/health` responde 200 y SQL Server acepta consultas.
+- [ ] Sumar RabbitMQ al compose.
+- [ ] Sumar el frontend (Angular) al compose.
+- [ ] Sumar ngrok y exponer el webhook con URL pública.
 
 ### Fase 8 — Documentación y entregables
 - [ ] `README.md` raíz con las 6 secciones que pide la spec (requisitos, `.env`, cómo levantar, cómo probar, supuestos).
@@ -127,6 +130,7 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 ## Estado actual
 
 - Andamiaje inicial: solo existe `encode-api` (minimal API .NET 10 con `GET /health`) y `EncodeAssistant.slnx` vacío.
-- Fase 0 casi completa: `.gitignore` raíz y `.env.example` (variables con datos falsos) creados. Falta el commit inicial.
-- Git en `main` sin commits; todo sin trackear.
+- Fase 0 completa: `.gitignore` raíz, `.env.example` y commit inicial (`085b43b`).
+- Docker verificado: `EncodeAssistant/encode-api/Dockerfile`, `docker/sqlserver/Dockerfile` y `docker-compose.yml` (`api` + `sqlserver`) levantan bien. La API responde `GET /health` con 200 y SQL Server acepta consultas (la contraseña del contenedor coincide con el `.env`). Falta commitear los archivos nuevos.
+- La base `EncodeInbox` todavía no existe (solo las de sistema); la creará EF Core en la Fase 2.
 - Pendiente: Fases 1 a 9.

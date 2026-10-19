@@ -5,6 +5,9 @@ docker cada uno siendo un servicio separado peor gestionado mediante docker-comp
 Hagamos un plan de trabajo y creamos un archivo md solo para esto quye vamos a ir actualizando segun se vaya imiplementando funcionalidades
 
 
+## Prompt 2
+En base al proyecto vamos a dockernizar la aplicacion de la api en .net 10 y crearemos un dockerfile correspondiente, que va a leer las variables de entorno del archivo .env, asi mismo crear una bd en docker de sqlserver con el dockerfile, finalmente ajustar las variables de entorno necesarias y crear el docker-compose para levantar la api y la bd en servicios separados
+
 
 
 
