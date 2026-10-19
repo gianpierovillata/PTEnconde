@@ -1,0 +1,6 @@
+@encode_api_HostAddress = http://localhost:5088
+
+GET {{encode_api_HostAddress}}/healty/
+Accept: application/json
+
+###

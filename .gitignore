@@ -1,0 +1,21 @@
+# --- Variables de entorno / secretos ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- .NET ---
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# --- Node / Angular ---
+**/node_modules/
+**/dist/
+**/.angular/
+npm-debug.log*
+
+# --- Docker / logs / datos ---
+*.log
+docker-data/
