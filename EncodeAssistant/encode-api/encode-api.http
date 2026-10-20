@@ -6,13 +6,19 @@ Accept: application/json
 
 ###
 
-### Webhook de Telegram (placeholder: el payload real de Telegram es JSON y requiere
-### el header X-Telegram-Bot-Api-Secret-Token; se implementa en la Fase 5).
-POST {{encode_api_HostAddress}}/api/v1/webhook/receiveMessage
+### Webhook de Telegram (payload real de Telegram, JSON con el header
+### X-Telegram-Bot-Api-Secret-Token; la validación se implementa en la Fase 5).
+POST {{encode_api_HostAddress}}/api/telegram/webhook
 Content-Type: application/json
+X-Telegram-Bot-Api-Secret-Token: {{telegram_webhook_secret}}
 
 {
-  "message": "texto de prueba"
+  "update_id": 100001,
+  "message": {
+    "message_id": 1,
+    "chat": { "id": 123456789, "type": "private" },
+    "text": "hola"
+  }
 }
 
 ###

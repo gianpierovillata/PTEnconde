@@ -67,5 +67,5 @@ docker compose --env-file .env.example config   # validar sin tocar el .env loca
 
 - El `.env` de la raíz tiene credenciales locales de desarrollo y está ignorado por git: **nunca** forzarlo al repo (`git add -f`). Solo se versiona `.env.example`.
 - `docker-compose.yml` ya inyecta las variables de configuración (formato `Seccion__Clave`), pero el código de `encode-api` todavía **no las consume** — el cableado de configuración queda para las próximas fases.
-- `EncodeAssistant/encode-api/encode-api.http` documenta los endpoints placeholder (`/api/v1/health`, `/api/v1/webhook/receiveMessage`, `/api/v1/webhook/sendMessage`); se reemplazan por su versión real en las fases 3 y 5.
+- `EncodeAssistant/encode-api/encode-api.http` documenta los endpoints (`/api/v1/health`, `/api/telegram/webhook`, `/api/v1/webhook/sendMessage`); se reemplazan por su versión real en las fases 3 y 5.
 - Git está inicializado en `main` con 6 commits (`085b43b` … `2c5872c`); `origin` configurado.

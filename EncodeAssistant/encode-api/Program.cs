@@ -46,18 +46,6 @@ app.MapGet("/", () => "Encode Assistant API is running.").WithName("Root");
 app.MapGet("/api/v1/health", () => Results.Ok(new { status = "Healthy" })).WithName("HealthCheck");
 
 /*
- * Endpoint para recibir mensajes de Telegram a través del webhook.
- * PLACEHOLDER: por ahora solo registra el payload. La validación del secret
- * (X-Telegram-Bot-Api-Secret-Token), la publicación en RabbitMQ y la persistencia
- * se implementan en las fases 3 y 5.
- */
-app.MapPost("/api/v1/webhook/receiveMessage", (TelegramWebhookPayload payload) =>
-{
-    Console.WriteLine($"Mensaje recibido del chat {payload.ChatId}: {payload.Text}");
-    return Results.Ok(new { status = "Message received" });
-}).WithName("TelegramWebhook");
-
-/*
  * Endpoint para enviar mensajes a Telegram.
  * PLACEHOLDER: la llamada real a la Bot API se implementa en la Fase 5.
  */
@@ -104,11 +92,6 @@ app.MapPost("/api/telegram/webhook", async ([FromBody] JsonElement update, ILogg
 
 
 app.Run();
-
-/// <summary>
-/// Payload mínimo del webhook de Telegram (placeholder, se reemplaza en la Fase 5).
-/// </summary>
-public record TelegramWebhookPayload(string ChatId, string Text);
 
 /// <summary>
 /// Petición de envío de mensaje desde la bandeja (placeholder, se reemplaza en la Fase 5).
