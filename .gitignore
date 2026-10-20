@@ -19,3 +19,5 @@ npm-debug.log*
 # --- Docker / logs / datos ---
 *.log
 docker-data/
+
+Notas.txt
