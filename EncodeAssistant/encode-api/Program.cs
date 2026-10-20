@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-// Swagger: generación del documento OpenAPI (SwaggerGen) y UI interactiva (SwaggerUI).
+// Swagger: generación del documento OpenAPI (SwaggerGen) y UI interactiva.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -65,12 +65,38 @@ app.MapPost("/api/telegram/webhook", async ([FromBody] JsonElement update, ILogg
         // Telegram envía un objeto "Update". El primer mensaje suele ser cuando el usuario inicia el bot.
         if (update.TryGetProperty("message", out JsonElement message))
         {
-            var chatId = message.GetProperty("chat").GetProperty("id").GetInt64();
-            
+            var chat = message.GetProperty("chat");
+            var chatId = chat.GetProperty("id").GetInt64();          // id de la conversación (el chat)
+            var chatType = chat.TryGetProperty("type", out JsonElement typeProp)
+                ? typeProp.GetString()
+                : "desconocido";
+
+            // "from" puede no venir (canales o admins anónimos), por eso se lee con TryGetProperty.
+            long? userId = null;
+            string? username = null;
+            string? firstName = null;
+            string? lastName = null;
+
+            if (message.TryGetProperty("from", out JsonElement from))
+            {
+                userId = from.GetProperty("id").GetInt64();
+                username = from.TryGetProperty("username", out JsonElement u) ? u.GetString() : null;
+                firstName = from.TryGetProperty("first_name", out JsonElement f) ? f.GetString() : null;
+                lastName = from.TryGetProperty("last_name", out JsonElement l) ? l.GetString() : null;
+            }
+
+            // Nombre para mostrar: @usuario, si no, nombre completo, si no, el id.
+            var emisor = username is not null ? $"@{username}"
+                : firstName is not null ? $"{firstName} {lastName}".Trim()
+                : userId is not null ? $"usuario {userId}"
+                : "emisor desconocido";
+
             if (message.TryGetProperty("text", out JsonElement textProperty))
             {
                 var text = textProperty.GetString();
-                logger.LogInformation($"Mensaje recibido de ChatID {chatId}: {text}");
+                logger.LogInformation(
+                    "Mensaje recibido | Conversación (chatId): {ChatId} ({ChatType}) | Emisor: {Emisor} (userId: {UserId}, nombre: {Nombre}) | Texto: {Texto}",
+                    chatId, chatType, emisor, userId, $"{firstName} {lastName}".Trim(), text);
 
                 // Si el usuario se conecta por primera vez, enviará el comando "/start"
                 if (text == "/start")
@@ -85,7 +111,7 @@ app.MapPost("/api/telegram/webhook", async ([FromBody] JsonElement update, ILogg
         logger.LogError(ex, "Error al procesar el webhook de Telegram");
     }
 
-    // Telegram exige recibir un HTTP 200 OK inmediatamente para no reintentar el envío
+    // Telegram exige recibir un HTTP 200 OK inmediato para no reintentar el envío
     return Results.Ok();
 });
 

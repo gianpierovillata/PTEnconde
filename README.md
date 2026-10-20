@@ -132,7 +132,7 @@ Y ver el registro en los logs:
 
 ```bash
 docker compose logs -f api | grep "Mensaje recibido"
-# → Mensaje recibido de ChatID 123456789: hola
+# → Mensaje recibido | Conversación (chatId): 123456789 (private) | Emisor: @anagomez (userId: 123456789, nombre: Ana Gómez) | Texto: hola
 ```
 
 También podés hacerlo desde `EncodeAssistant/encode-api/encode-api.http` (VS Code / Rider / Swagger).
@@ -164,7 +164,7 @@ Y confirmá en los logs que el update llegó y se procesó:
 
 ```bash
 docker compose logs -f api | grep "Mensaje recibido"
-# → Mensaje recibido de ChatID 123456789: test-tunel
+# → Mensaje recibido | Conversación (chatId): 123456789 (private) | Emisor: @anagomez (userId: 123456789, nombre: Ana Gómez) | Texto: test-tunel
 ```
 
 Si el curl da 200 y el log aparece, el camino ngrok → API → webhook funciona: cualquier update que envíe Telegram va a llegar igual. `getWebhookInfo` (Paso 5) es el complemento para depurar el lado de Telegram: muestra la URL registrada, los updates pendientes y los errores recientes.
