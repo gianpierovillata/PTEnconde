@@ -101,7 +101,8 @@ app.MapPost("/api/telegram/webhook", async ([FromBody] JsonElement update, ILogg
                 // Si el usuario se conecta por primera vez, enviará el comando "/start"
                 if (text == "/start")
                 {
-                    // Aquí ejecutas la lógica de bienvenida o registro en tu sistema
+                    logger.LogInformation("El usuario {Emisor} ha iniciado el bot con /start", emisor);
+                    // Aquí podrías enviar un mensaje de bienvenida o registrar al usuario en tu sistema.
                 }
             }
         }
