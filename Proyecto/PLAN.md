@@ -30,7 +30,7 @@ Bandeja web donde un operador recibe, visualiza y responde **en tiempo real** lo
 | `Encode.Infrastructure` | EF Core + SQL Server, RabbitMQ, cliente de Telegram, servicios externos. |
 | `encode-api` | Host ASP.NET Core: webhook de Telegram, endpoints REST, hub de SignalR, registro del webhook al arrancar. |
 
-**Frontend:** app Angular **21 LTS** en su propio contenedor, servida como SPA (nginx en producción).
+**Frontend:** app Angular **22** (última versión estable) en su propio contenedor, servida como SPA (nginx en producción).
 
 **Flujo de mensajes (a detallar en ADR-003):**
 `Usuario → Telegram → webhook (ngrok) → encode-api → RabbitMQ → consumer → SQL Server → SignalR → operador`.
@@ -39,7 +39,7 @@ Respuesta: `operador → SignalR/HTTP → encode-api → Telegram Bot API → us
 ## Stack y decisiones
 
 - Backend: **.NET 10** (SDK verificado 10.0.402).
-- Frontend: **Angular 21 LTS** (`@angular/cli@21` → 21.2.x). Última estable publicada es 22.2.3 pero **no es LTS**; se usa 21 por soporte extendido (dist-tag `v21-lts`).
+- Frontend: **Angular 22** (`@angular/cli@22`, proyecto ya generado con `^22.2.0`). La spec pide la **última versión estable**: se usa 22 (aunque no es LTS) en lugar de 21 LTS; registrar en **Supuestos** del README. Coherente con `PLAN_FRONTEND.md`.
 - Base de datos: **SQL Server** (ADR-001).
 - Mensajería: **RabbitMQ** (mensajes entrantes).
 - Tiempo real: **SignalR** (ADR-002).
@@ -67,7 +67,7 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 | .NET SDK | ✅ instalado | 10.0.402 — `dotnet build/run --project EncodeAssistant/encode-api/encode-api.csproj` |
 | Node.js | ✅ instalado | v24.22.0 |
 | npm | ✅ instalado | 11.19.1 — **en PowerShell usar `npm.cmd`** (la política de ejecución bloquea `npm.ps1`); o `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Angular CLI | ❌ no instalado | Instalar con `npm.cmd install -g @angular/cli@21` (LTS) |
+| Angular CLI | ❌ no instalado | Instalar con `npm.cmd install -g @angular/cli@22` (coherente con la app ya generada en 22.2.x) |
 | Docker Desktop | ✅ instalado y corriendo | Engine 29.9.1, Compose v5.6.0 — **`docker` no está en el PATH de esta sesión**: usar `$env:PATH += "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin"` o reabrir la terminal |
 | ngrok | ❌ no instalado | Definir si va como servicio del compose (imagen `ngrok/ngrok`) o binario local — ver Fase 7 |
 | Git | ✅ | rama `main`, árbol limpio, 3 commits, `origin` configurado |
@@ -107,7 +107,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] Commit inicial del andamiaje (`085b43b`).
 
 ### Fase 0.5 — Preparación del entorno (previo a código)
-- [ ] Instalar Angular CLI 21 LTS: `npm.cmd install -g @angular/cli@21` y verificar `ng version`.
+- [ ] Instalar Angular CLI 22: `npm.cmd install -g @angular/cli@22` y verificar `ng version`.
 - [ ] Resolver PATH de Docker en la shell (reabrir terminal o agregar `resources\bin` al PATH).
 - [ ] Decidir y dejar instalado ngrok (servicio en compose recomendado vs. binario local).
 - [ ] Completar `.env` local con token real del bot (BotFather) y token de ngrok (no commitear).
@@ -141,7 +141,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [ ] Endpoint de webhook con validación del secret (`X-Telegram-Bot-Api-Secret-Token`).
 - [ ] Registro automático del webhook contra la URL pública al arrancar (reintento si ngrok aún no está listo).
 
-### Fase 6 — Frontend Angular (21 LTS)
+### Fase 6 — Frontend Angular (22)
 - [ ] Scaffold con `ng new` (standalone, sin SSR salvo que se necesite) dentro de `EncodeAssistant/frontend/` (o raíz equivalente).
 - [ ] Estructura de la app y layout de dos paneles.
 - [ ] Lista de contactos (nombre, no leídos, preview).
