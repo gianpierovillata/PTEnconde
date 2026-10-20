@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>encode_api</RootNamespace>
+    <RootNamespace>EncodeAssistant.EncodeApi</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

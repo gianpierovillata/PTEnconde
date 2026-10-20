@@ -1,4 +1,4 @@
-namespace EncodeAssistant.encode_api.Domain.Entities
+namespace EncodeAssistant.EncodeApi.Domain.Entities
 {
     public class Usuario
     {

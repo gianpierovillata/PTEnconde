@@ -16,11 +16,12 @@ El repositorio es un andamiaje. **No** existen todavía frontend, ADRs, tests ni
 
 ## Comandos
 
-Compilar/ejecutar **debe apuntar al csproj** — el `.slnx` no referencia ningún proyecto, así que `dotnet build` a nivel de solución no compila nada.
+La solución `EncodeAssistant/EncodeAssistant.slnx` ya referencia `encode-api`, pero se recomienda apuntar al csproj para no depender de ese estado.
 
 ```bash
 dotnet build EncodeAssistant/encode-api/encode-api.csproj
 dotnet run   --project EncodeAssistant/encode-api/encode-api.csproj   # perfil http -> http://localhost:5088
+dotnet build EncodeAssistant/EncodeAssistant.slnx                     # opcional (compila el host)
 ```
 
 - Requiere el **SDK de .NET 10** (verificado con 10.0.402).
@@ -54,5 +55,5 @@ docker compose --env-file .env.example config   # validar sin tocar el .env loca
 
 - El `.env` de la raíz tiene credenciales locales de desarrollo y está ignorado por git: **nunca** forzarlo al repo (`git add -f`). Solo se versiona `.env.example`.
 - `docker-compose.yml` ya inyecta las variables de configuración (formato `Seccion__Clave`), pero el código de `encode-api` todavía **no las consume** — el cableado de configuración queda para las próximas fases.
-- `EncodeAssistant/encode-api/encode-api.http` llama a `/weatherforecast/`, que **no está mapeado**; el record `WeatherForecast` en `Program.cs` es código sobrante de la plantilla.
-- Git está inicializado en `main` y **sin commits todavía**; todo está sin trackear.
+- `EncodeAssistant/encode-api/encode-api.http` documenta los endpoints placeholder (`/api/v1/health`, `/api/v1/webhook/receiveMessage`, `/api/v1/webhook/sendMessage`); se reemplazan por su versión real en las fases 3 y 5.
+- Git está inicializado en `main` con 6 commits (`085b43b` … `2c5872c`); `origin` configurado.

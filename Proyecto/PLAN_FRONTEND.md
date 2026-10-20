@@ -1,6 +1,6 @@
 # Plan de Frontend — encondechatapp (Angular 22)
 
-> **Estado:** Solo plan. **No se crea código aún**. Se seguirá este orden cuando se implemente.
+> **Estado:** Plan **implementado**. La estructura y los componentes ya existen en `EncodeAssistant/encondechatapp/` (standalone, SSR, CSS puro, tokens de diseño) y el frontend está dockerizado (nginx, SPA) en el commit `2c5872c`. **Pendiente:** toda la lógica real (HTTP contra la API, conexión SignalR, marcado de leídos y envío), que se conecta en las fases 4–6 de `PLAN.md`. Los servicios y modelos siguen siendo stubs.
 
 ## 1. Objetivo
 
@@ -21,9 +21,7 @@ Requisitos: Angular 22 (standalone components), CSS puro (sin Tailwind), sin imp
 | SSR | **Mantener SSR** (actual `outputMode: server + ssr`) | Proyecto generado con SSR. No eliminarlo (podría afectar build). Docker se adaptará a SSR o a SPA según despliegue. |
 | Tipado | **Strict** (heredado de tsconfig) | Buenas prácticas. |
 
-## 3. Estructura de carpetas propuesta
-
-Crear solo la estructura (plan). **No crear archivos aún**.
+## 3. Estructura de carpetas implementada
 
 ```text
 src/
@@ -71,7 +69,7 @@ src/
 
 > Nota: Los subcomponentes de `chat/` (`chat-header`, `message-list`, `message-input`) **son opcionales pero recomendados** para mantener responsabilidades únicas (SRP). Se incluirán en el plan (estructura lista), sin implementarlos con lógica.
 
-## 4. Componentes — responsabilidades (solo definición)
+## 4. Componentes — responsabilidades (implementado)
 
 | Componente | Tipo | Responsabilidad (definición, sin lógica) |
 |---|---|---|
@@ -82,7 +80,7 @@ src/
 | `MessageListComponent` | Presentational | Muestra historial de mensajes (burbujas izquierda/derecha). Solo estructura vacía/list placeholder. |
 | `MessageInputComponent` | Presentational | Campo de texto + botón "Enviar". Emite evento `send` (stub de salida) sin lógica. |
 
-## 5. Modelos y Servicios (stubs, sin implementar)
+## 5. Modelos y Servicios (stubs implementados, sin lógica real)
 
 ### Modelos (`core/models/`)
 
@@ -103,7 +101,7 @@ src/
 - `createdAt: Date | string`
 - `read?: boolean`
 
-> Solo interfaces/types. **Sin clases, sin lógica, sin mocks con datos reales** (placeholder vacío).
+> Solo interfaces/types. **Sin clases, sin lógica, sin mocks con datos reales** (placeholder vacío). Implementado en `core/models/`.
 
 ### Servicios (`core/services/`)
 
@@ -198,9 +196,9 @@ html, body {
 - **Scroll independiente**: `overflow-y: auto` en `.sidebar-list` y `.message-list`.
 - **Tipografía minimalista**: usar pesos 400/500/600 según jerarquía. Sin decoraciones innecesarias.
 
-## 8. Orden de implementación (paso a paso, sin crear aún)
+## 8. Orden de implementación (ejecutado)
 
-Cuando se autorice a crear código, seguir este orden **estrictamente**:
+Este orden ya se siguió al crear la estructura (pasos 1–13 completados):
 
 1. **Crear modelos** (`core/models/*`) — solo interfaces.
 2. **Crear servicios stubs** (`core/services/*`) — solo firmas, sin lógica.
@@ -216,7 +214,7 @@ Cuando se autorice a crear código, seguir este orden **estrictamente**:
 12. **Verificar build** (`ng build --configuration development`) sin errores.
 13. **Verificar estructura** (compilación TypeScript OK).
 
-## 9. Dockerización (plan para después)
+## 9. Dockerización (implementada: Opción B, SPA + Nginx)
 
 **Objetivo:** añadir `frontend` como servicio en `docker-compose.yml` (multi-stage), servir Angular. Dos opciones viables con SSR actual:
 
@@ -227,7 +225,7 @@ Cuando se autorice a crear código, seguir este orden **estrictamente**:
 
 **Recomendación:** **Opción B (SPA + Nginx)**. Mantener SSR en código pero para imagen de producción servir estático (simplifica y reduce superficie). Documentar decisión en ADR si se elige B.
 
-### 9.1 Archivos a crear (plan)
+### 9.1 Archivos creados (implementado)
 
 - `EncodeAssistant/encondechatapp/.dockerignore`
   - Ignorar: `node_modules/`, `dist/`, `.angular/`, `.git/`, `*.log`, `.env*`, `coverage/`
@@ -270,20 +268,20 @@ frontend:
 - Healthcheck opcional (`curl -f http://localhost/ || exit 1`).
 - CORS ya gestionado en API (`CORS_ALLOWED_ORIGINS` incluirá origen del frontend).
 
-## 10. Criterios de aceptación (plan cumplido)
+## 10. Criterios de aceptación
 
-- [ ] Estructura de carpetas definida (sin archivos creados aún) — **este plan**.
-- [ ] Componentes identificados con responsabilidades claras.
-- [ ] Modelos/servicios son **solo stubs** (sin lógica, sin implementación).
-- [ ] Layout: panel lateral 320px + panel central flexible, 100dvh.
-- [ ] Estilo alineado a encodelabs.com.ar (tokens neutros + profesional).
-- [ ] SSR se mantiene (sin romper configuración actual).
-- [ ] Dockerización planificada (SPA+Nginx recomendado, multi-stage, no-root).
-- [ ] **No se ha escrito código TypeScript/HTML/CSS todavía** (solo este `.md`).
+- [x] Estructura de carpetas creada.
+- [x] Componentes identificados con responsabilidades claras.
+- [x] Modelos/servicios son **solo stubs** (sin lógica, sin implementación).
+- [x] Layout: panel lateral 320px + panel central flexible, 100dvh.
+- [x] Estilo alineado a encodelabs.com.ar (tokens neutros + profesional).
+- [x] SSR se mantiene (sin romper configuración actual).
+- [x] Dockerización ejecutada (SPA + Nginx, multi-stage). _Pendiente: `.dockerignore` y usuario no-root en nginx (ver Fase 7 de `PLAN.md`)._
+- [x] Código TypeScript/HTML/CSS de la estructura creado (commit `2c5872c`).
 
 ## 11. Próximos pasos
 
-1. **Aprobar este plan** (usuario).
-2. **Crear únicamente la estructura + archivos vacíos/stubs** (sin lógica) siguiendo orden §8.
-3. **Dockerizar** (Fase 7 ampliada) siguiendo §9.
-4. **Conectar API + SignalR** en fases posteriores (no forma parte de este plan).
+1. ~~Aprobar este plan~~ ✅.
+2. ~~Crear la estructura + archivos vacíos/stubs~~ ✅.
+3. ~~Dockerizar~~ ✅ (falta `.dockerignore` + nginx no-root).
+4. **Conectar API + SignalR** en las fases 4–6 de `PLAN.md` (pendiente).

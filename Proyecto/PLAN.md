@@ -72,12 +72,14 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 | ngrok | ❌ no instalado | Definir si va como servicio del compose (imagen `ngrok/ngrok`) o binario local — ver Fase 7 |
 | Git | ✅ | rama `main`, árbol limpio, 3 commits, `origin` configurado |
 
-**Discrepancias a corregir (sin tocar código todavía):**
-- `AGENTS.md` dice "sin commits todavía": obsoleto (hay 3 commits: `085b43b`, `2eac490`, `cab4626`). ActualizarAGENTS.md en Fase 8.
-- Carpetas `Aplication/` (falta la "p") y namespaces `encode_api` dentro de `encode-api`: renombrar/normalizar en Fase 1.
-- `EncodeAssistant.slnx` sigue vacío (no compila nada desde la solución).
-- `Program.cs` aún tiene el record `WeatherForecast` sobrante de la plantilla; `encode-api.http` apunta a `/weatherforecast/` inexistente.
-- `Domain/Entities` y `Aplication/Services` viven dentro del host (los services están vacíos): mover a las capas de Clean Architecture en Fase 1.
+**Discrepancias corregidas (20/10/2026):**
+- ✅ `AGENTS.md` actualizado: ya no dice "sin commits todavía" (hay 6) y refleja el `.slnx` con proyecto.
+- ✅ `Program.cs` sin `WeatherForecast`; `encode-api.http` actualizado a los endpoints reales.
+- ✅ Namespaces del dominio normalizados a `EncodeAssistant.EncodeApi.*`; `RootNamespace` del csproj corregido.
+- ✅ `EncodeAssistant.slnx` ahora referencia `encode-api`.
+
+**Discrepancias pendientes (se resuelven en fases posteriores):**
+- Carpetas `Aplication/` (falta la "p") y services vacíos dentro del host: mover a las capas de Clean Architecture en Fase 1.
 - `Proyecto/AnalisisC4/Nivel1.drawio` y `Nivel2.drawio` existen: revisar que coincidan con la arquitectura final antes de entregar.
 
 ## Checklist transversal de seguridad y despliegue
@@ -180,12 +182,13 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [ ] Documento de trabajo con IA.
 - [ ] Repositorio sin `.env` ni secretos.
 
-## Estado actual (19/10/2026)
+## Estado actual (20/10/2026)
 
-- Git limpio en `main` con 3 commits (`085b43b`, `2eac490`, `cab4626`) e `origin` configurado.
-- Solo existe `encode-api` (minimal API .NET 10 con `GET /health`); hay borradores de entidades (`Usuario`, `Mensaje`, `Operador`) y services vacíos **dentro del host**, fuera de la estructura Clean Architecture.
-- `EncodeAssistant.slnx` vacío; carpetas `Aplication`/namespaces `encode_api` a normalizar.
-- Docker verificado: `docker compose up` levanta `api` + `sqlserver`; `/health` responde 200. La base `EncodeInbox` la creará EF Core en la Fase 2.
+- Git limpio en `main` con 6 commits (`085b43b` … `2c5872c`) e `origin` configurado.
+- **Backend:** `encode-api` (minimal API .NET 10) con endpoints placeholder (`GET /`, `GET /api/v1/health`, `POST /api/v1/webhook/receiveMessage`, `POST /api/v1/webhook/sendMessage`). Entidades borrador (`Usuario`, `Mensaje`, `Operador`) dentro del host; services `MensajeService`/`UsuarioService` vacíos. Pendiente: estructura Clean Architecture (Fase 1).
+- **Frontend:** `encondechatapp` (Angular 22 + SSR) con feature `inbox` (sidebar + chat + chat-header + message-list + message-input), tokens de diseño y routing listos; servicios/modelos en stub. Dockerizado (nginx, SPA). Pendiente: lógica real (Fases 4–6).
+- **Docker:** `docker compose up` levanta `api` + `sqlserver` + `frontend`. Verificado `/health` 200 y SQL Server operativo. La base `EncodeInbox` la creará EF Core en la Fase 2. Faltan `rabbitmq`, `ngrok`, healthchecks y `.dockerignore`.
+- **Inconsistencias corregidas hoy:** `AGENTS.md`, `PLAN_FRONTEND.md`, `Program.cs`, `encode-api.http`, namespaces del dominio y `EncodeAssistant.slnx` (ya referencia `encode-api`).
 - Angular CLI y ngrok **no instalados** (Fase 0.5). Docker funciona pero su PATH no está en la sesión de shell actual.
 - Diagramas C4 (Nivel 1 y 2) creados en draw.io; pendientes de revisión contra la arquitectura final.
 - Pendiente: Fases 0.5 y 1 a 9.
