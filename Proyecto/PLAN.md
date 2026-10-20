@@ -79,8 +79,9 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 - ✅ `EncodeAssistant.slnx` ahora referencia `encode-api`.
 
 **Discrepancias pendientes (se resuelven en fases posteriores):**
-- Carpetas `Aplication/` (falta la "p") y services vacíos dentro del host: mover a las capas de Clean Architecture en Fase 1.
+- Carpetas `Aplication/` (falta la "p") y services `MensajeService`/`UsuarioService` vacíos dentro del host: mover a las capas de Clean Architecture en Fase 1. Entidades borrador `Usuario`/`Operador` siguen sin uso.
 - `Proyecto/AnalisisC4/Nivel1.drawio` y `Nivel2.drawio` existen: revisar que coincidan con la arquitectura final antes de entregar.
+- Falta `.dockerignore` en el contexto de build de la API (`EncodeAssistant/encode-api/`): hoy se copian `bin/` y `obj/` a la imagen.
 
 ## Checklist transversal de seguridad y despliegue
 
@@ -121,35 +122,36 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [ ] Modelar entidades del dominio (`Usuario`/Contacto, `Mensaje`, `Conversación`, `Operador`) y casos de uso (ingesta de mensaje, listar contactos, historial, marcar leído, responder).
 
 ### Fase 2 — Persistencia (SQL Server + EF Core)
-- [ ] `DbContext`, configuraciones y migraciones.
-- [ ] Repositorios en `Encode.Infrastructure`.
-- [ ] Definir política de no leídos por contacto.
-- [ ] Confirmar que la base `EncodeInbox` se crea por migración al levantar (o `EnsureCreated` en dev).
+- [x] `DbContext` (`Persistence/EncodeDbContext.cs`) con las tablas `Contactos` y `Mensajes`, índices y borrado en cascada.
+- [ ] Repositorios en `Encode.Infrastructure` (hoy el acceso a datos vive en `BandejaService`, dentro del host: se mueve al separar capas en Fase 1).
+- [x] Política de no leídos: cada entrante suma 1; al abrir la conversación (`POST /api/v1/contacts/{chatId}/read`) se pone en 0 y se marcan los mensajes como leídos.
+- [x] La base se crea al levantar con `EnsureCreated` (con reintentos ante el arranque en frío de SQL Server).
 
 ### Fase 3 — Mensajería (RabbitMQ)
 - [ ] Sumar RabbitMQ al `docker-compose.yml` (credenciales desde `.env`, red interna, healthcheck).
 - [ ] Publicar el mensaje entrante del webhook a una cola.
 - [ ] Consumer que persiste y notifica.
 - [ ] Definir topología de colas/exchanges (insumo de ADR-003).
+- **Nota (20/10/2026):** el flujo del webhook hoy es directo (`webhook → persistencia → SignalR`); RabbitMQ se intercala en esta fase sin cambiar el contrato hacia el frontend.
 
 ### Fase 4 — Tiempo real (SignalR)
-- [ ] Hub (`/hubs/inbox`) y contratos de notificación (nuevo mensaje, actualización de contacto).
-- [ ] Emisión tras procesar el consumer.
-- [ ] CORS para el origen del frontend.
+- [x] Hub (`/hubs/inbox`, `Hubs/InboxHub.cs`) con los eventos `NuevoMensaje` y `ContactoActualizado`.
+- [x] Emisión al persistir cada mensaje (entrante del webhook y respuesta del operador).
+- [x] CORS restringido con `CORS_ALLOWED_ORIGINS` y credenciales habilitadas para el negotiate.
 
 ### Fase 5 — Integración Telegram
-- [ ] Cliente de la Bot API para enviar respuestas.
+- [ ] Cliente de la Bot API para enviar respuestas (hoy la respuesta se persiste y se emite por SignalR, pero **no** viaja a Telegram).
 - [ ] Endpoint de webhook con validación del secret (`X-Telegram-Bot-Api-Secret-Token`).
 - [ ] Registro automático del webhook contra la URL pública al arrancar (reintento si ngrok aún no está listo).
 
 ### Fase 6 — Frontend Angular (22)
-- [ ] Scaffold con `ng new` (standalone, sin SSR salvo que se necesite) dentro de `EncodeAssistant/frontend/` (o raíz equivalente).
-- [ ] Estructura de la app y layout de dos paneles.
-- [ ] Lista de contactos (nombre, no leídos, preview).
-- [ ] Vista de conversación + historial + campo de respuesta.
-- [ ] Conexión SignalR y marcado de leídos al abrir.
-- [ ] Estilo alineado a encodelabs.com.ar.
-- [ ] `environment` con `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL` inyectadas por build args o runtime config.
+- [x] Scaffold con `ng new` (standalone + SSR) en `EncodeAssistant/encondechatapp/`.
+- [x] Estructura de la app y layout de dos paneles.
+- [x] Lista de contactos en el sidebar (icono de usuario, nombre/@usuario, preview, hora y badge de no leídos), ordenada por último mensaje.
+- [x] Vista de conversación: historial en burbujas entrante/saliente, autoscroll y campo de respuesta (Enter envía).
+- [x] Conexión SignalR (`RealtimeService`), alta en vivo de mensajes y marcado de leídos al abrir.
+- [x] Estilo alineado a encodelabs.com.ar (tokens de `styles.css`).
+- [x] Runtime config: `/assets/config.json` generado por `docker-entrypoint.sh` desde `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL`; en desarrollo hay un `public/assets/config.json` con los valores locales.
 
 ### Fase 7 — Docker y exposición
 - [x] Dockerfile multi-stage para la API (.NET 10, usuario no root, `ASPNETCORE_URLS=http://+:8080`).
@@ -157,7 +159,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] `docker-compose.yml` con `api` + `sqlserver` (red `backend` y volumen `sqlserver-data`).
 - [x] Verificado: `docker compose up` levanta `api` y `sqlserver`; `/health` responde 200 y SQL Server acepta consultas.
 - [ ] Sumar RabbitMQ al compose.
-- [ ] Sumar el frontend (Angular) al compose (build multi-stage node→nginx, usuario no root, `.dockerignore`).
+- [x] Sumar el frontend (Angular) al compose (build multi-stage node→nginx, `.dockerignore`); genera `config.json` en runtime desde las variables del `.env`.
 - [x] Sumar ngrok al compose: dos servicios (`ngrok-api`, `ngrok-app`) con URL estática por cuenta — API `https://wielder-removing-dilation.ngrok-free.dev` → host 5088 y Angular `https://trickle-batch-mollusk.ngrok-free.dev` → host 4200. Authtokens verificados.
   - Verificado 20/10/2026: `curl https://wielder-removing-dilation.ngrok-free.dev/api/v1/health` → `{"status":"Healthy"}` y `https://trickle-batch-mollusk.ngrok-free.dev/` → HTTP 200.
   - Un ngrok local con el mismo dominio bloquea al servicio (`ERR_NGROK_334`): usar uno u otro, no ambos.
@@ -187,12 +189,13 @@ Aplica a todas las fases (revisar antes de cada commit):
 
 ## Estado actual (20/10/2026)
 
-- Git limpio en `main` con 6 commits (`085b43b` … `2c5872c`) e `origin` configurado.
-- **Backend:** `encode-api` (minimal API .NET 10) con endpoints (`GET /`, `GET /api/v1/health`, `POST /api/telegram/webhook` — webhook real de Telegram, aún con lógica inline—, `POST /api/v1/webhook/sendMessage` placeholder). Entidades borrador (`Usuario`, `Mensaje`, `Operador`) dentro del host; services `MensajeService`/`UsuarioService` vacíos. Pendiente: estructura Clean Architecture (Fase 1).
-- **Frontend:** `encondechatapp` (Angular 22 + SSR) con feature `inbox` (sidebar + chat + chat-header + message-list + message-input), tokens de diseño y routing listos; servicios/modelos en stub. Dockerizado (nginx, SPA). Pendiente: lógica real (Fases 4–6).
-- **Docker:** `docker compose up` levanta `sqlserver` + `api` + `frontend` + `ngrok-api` + `ngrok-app`. Verificado `/api/v1/health` 200 y SQL Server operativo. La base `EncodeDb` la creará EF Core en la Fase 2. Faltan `rabbitmq`, healthchecks y `.dockerignore`.
-- **ngrok (nuevo, 20/10/2026):** dos túneles públicos en Docker, uno por cuenta — `ngrok-api` → `https://wielder-removing-dilation.ngrok-free.dev` (host 5088) y `ngrok-app` → `https://trickle-batch-mollusk.ngrok-free.dev` (host 4200). Los dos authtoken (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`) verificados; respuestas 200 desde la URL pública. Variables nuevas en `.env.example`: `NGROK_DOMAIN_API/APP`, `PUBLIC_BASE_URL`, `FRONTEND_PUBLIC_URL`; `CORS_ALLOWED_ORIGINS` y las URLs de `FRONTEND_*` apuntan ya al túnel HTTPS de la API.
-- **Inconsistencias corregidas hoy:** `AGENTS.md`, `PLAN_FRONTEND.md`, `Program.cs`, `encode-api.http`, namespaces del dominio y `EncodeAssistant.slnx` (ya referencia `encode-api`).
-- Angular CLI **no instalado**; ngrok **sí** (`3.39.11`) — se usa solo el agente de Docker. Docker funciona pero su PATH a veces no está en la sesión de shell actual.
+- Git limpio en `main` con 6 commits (`085b43b` … `2c5872c`) e `origin` configurado (los cambios de esta fase están sin commitear).
+- **Backend:** `encode-api` (minimal API .NET 10). Endpoints: `GET /`, `GET /api/v1/health`, `POST /api/telegram/webhook` (persiste y emite), `GET /api/v1/contacts`, `GET /api/v1/contacts/{chatId}/messages`, `POST /api/v1/contacts/{chatId}/messages` (respuesta del operador), `POST /api/v1/contacts/{chatId}/read`, y el hub SignalR `/hubs/inbox`. Persistencia con EF Core + SQL Server (`EncodeDbContext`, entidades `Contacto`/`Mensaje`), hub en `Hubs/InboxHub.cs` y casos de uso en `Aplication/Services/BandejaService.cs`. Pendiente: separar capas (Fase 1) y RabbitMQ (Fase 3).
+- **Frontend:** `encondechatapp` (Angular 22 + SSR) con la bandeja funcional: sidebar de contactos (icono, preview, hora, badge de no leídos), panel de chat con historial en burbujas, autoscroll, envío de respuestas y actualización en vivo por SignalR. Servicios reales (`ContactService`, `ChatService`, `RealtimeService`) y config en runtime (`/assets/config.json`).
+- **Docker:** `docker compose up` levanta `sqlserver` + `api` + `frontend` + `ngrok-api` + `ngrok-app`. Verificado `/api/v1/health` 200, esquema creado en SQL Server y flujo de punta a punta (webhook → SQL → SignalR → bandeja). Faltan `rabbitmq`, healthchecks y `.dockerignore` del contexto de la API.
+- **Prueba de punta a punta (20/10/2026):** webhook local y vía ngrok → contacto y mensaje persistidos (`GET /api/v1/contacts`), marcado de leídos, respuesta del operador (201) y eventos `NuevoMensaje` / `ContactoActualizado` recibidos por un cliente SignalR real contra `http://localhost:5088/hubs/inbox`.
+- **SQL Server:** el volumen se recreó hoy porque la contraseña guardada no coincidía con `SQLSERVER_SA_PASSWORD` del `.env`; no había bases de usuario, así que no se perdió información.
+- **ngrok (20/10/2026):** dos túneles públicos en Docker, uno por cuenta — `ngrok-api` → `https://wielder-removing-dilation.ngrok-free.dev` (host 5088) y `ngrok-app` → `https://trickle-batch-mollusk.ngrok-free.dev` (host 4200). Los dos authtoken (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`) verificados; respuestas 200 desde la URL pública. Variables en `.env.example`: `NGROK_DOMAIN_API/APP`, `PUBLIC_BASE_URL`, `FRONTEND_PUBLIC_URL`; `CORS_ALLOWED_ORIGINS` y las URLs de `FRONTEND_*` apuntan ya al túnel HTTPS de la API.
+- Angular CLI **no instalado**; ngrok **sí** (`3.39.11`) — se usa solo el agente de Docker. Docker funciona pero su PATH a veces no está en la sesión de shell actual (encadenar con `sg docker -c "..."`).
 - Diagramas C4 (Nivel 1 y 2) creados en draw.io; pendientes de revisión contra la arquitectura final.
-- Pendiente: Fases 0.5 y 1 a 9.
+- Pendiente: Fases 0.5, 1, 3, 5 y 8 (documentación/entregables), más los tests de la Fase 9.

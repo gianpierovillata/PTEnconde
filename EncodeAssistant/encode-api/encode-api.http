@@ -8,6 +8,7 @@ Accept: application/json
 
 ### Webhook de Telegram (payload real de Telegram, JSON con el header
 ### X-Telegram-Bot-Api-Secret-Token; la validación se implementa en la Fase 5).
+### Al recibirlo, el mensaje se guarda en SQL Server y se emite por SignalR.
 POST {{encode_api_HostAddress}}/api/telegram/webhook
 Content-Type: application/json
 X-Telegram-Bot-Api-Secret-Token: {{telegram_webhook_secret}}
@@ -24,13 +25,30 @@ X-Telegram-Bot-Api-Secret-Token: {{telegram_webhook_secret}}
 
 ###
 
-### Enviar mensaje a Telegram (placeholder de la Fase 5).
-POST {{encode_api_HostAddress}}/api/v1/webhook/sendMessage
+### Contactos de la bandeja (sidebar), ordenados por último mensaje
+GET {{encode_api_HostAddress}}/api/v1/contacts
+Accept: application/json
+
+###
+
+### Historial de una conversación (orden cronológico)
+GET {{encode_api_HostAddress}}/api/v1/contacts/123456789/messages
+Accept: application/json
+
+###
+
+### Respuesta del operador: se persiste y se emite por SignalR
+### (el envío real a la Bot API se implementa en la Fase 5).
+POST {{encode_api_HostAddress}}/api/v1/contacts/123456789/messages
 Content-Type: application/json
 
 {
-  "chatId": "123456789",
   "text": "Hola desde la bandeja"
 }
+
+###
+
+### Marcar la conversación como leída (no leídos en 0)
+POST {{encode_api_HostAddress}}/api/v1/contacts/123456789/read
 
 ###

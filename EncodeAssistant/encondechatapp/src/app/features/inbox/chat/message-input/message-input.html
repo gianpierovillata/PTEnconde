@@ -1,6 +1,16 @@
 <footer class="message-input">
   <div class="message-input-row">
-    <input class="message-input-field" type="text" placeholder="Escribir respuesta..." disabled />
-    <button class="message-input-button" disabled>Enviar</button>
+    <input
+      class="message-input-field"
+      type="text"
+      placeholder="Escribir respuesta..."
+      [value]="texto()"
+      [disabled]="!habilitado()"
+      (input)="actualizarTexto($any($event.target).value)"
+      (keydown)="alPresionarTecla($event)"
+    />
+    <button class="message-input-button" type="button" [disabled]="!habilitado() || texto().trim().length === 0" (click)="enviarMensaje()">
+      Enviar
+    </button>
   </div>
 </footer>

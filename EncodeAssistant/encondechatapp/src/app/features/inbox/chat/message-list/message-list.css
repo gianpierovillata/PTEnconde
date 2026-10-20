@@ -7,3 +7,46 @@
   flex-direction: column;
   gap: 12px;
 }
+
+.message-list-vacio {
+  margin: auto;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 65%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+}
+
+.message--entrante {
+  align-self: flex-start;
+  background: var(--incoming-bg);
+  color: var(--incoming-text);
+  border-bottom-left-radius: var(--radius-xs);
+}
+
+.message--saliente {
+  align-self: flex-end;
+  background: var(--outgoing-bg);
+  color: var(--outgoing-text);
+  border-bottom-right-radius: var(--radius-xs);
+}
+
+.message-text {
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.message-time {
+  font-size: 11px;
+  align-self: flex-end;
+  opacity: 0.6;
+}

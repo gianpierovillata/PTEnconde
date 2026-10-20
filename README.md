@@ -57,8 +57,8 @@ El `.env` **nunca se commitea** (lo ignora `.gitignore`); solo se versiona `.env
 | `TELEGRAM_WEBHOOK_SECRET` | Secreto propio (lo elegís vos) para validar el header `X-Telegram-Bot-Api-Secret-Token` cuando se implemente (Fase 5). |
 | `PUBLIC_BASE_URL` | URL **completa** del túnel de la API, ej. `https://wielder-removing-dilation.ngrok-free.dev` (sin barra final). |
 | `FRONTEND_PUBLIC_URL` | URL completa del túnel del frontend. |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos separados por coma; debe incluir la URL pública del frontend (`FRONTEND_PUBLIC_URL`). Hoy llega al contenedor de la API pero **el middleware CORS todavía no está implementado** (Fase 4). |
-| `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL` | URLs que el navegador usará para llegar a la API y a SignalR (HTTPS público para evitar *mixed content*). Hoy se inyectan al contenedor del frontend; **la app Angular todavía no las consume** (servicios en stub, Fases 4–6). |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos separados por coma; debe incluir la URL pública del frontend (`FRONTEND_PUBLIC_URL`). La API lo aplica al middleware CORS y al *negotiate* de SignalR. |
+| `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL` | URLs que el navegador usará para llegar a la API y a SignalR (HTTPS público para evitar *mixed content*). El contenedor del frontend genera `/assets/config.json` con estos valores al arrancar y la app los lee en runtime. |
 | `RABBITMQ_*` | Ya vienen con valores de referencia; se usan cuando RabbitMQ entre al compose (Fase 3). |
 
 ## 3. Cómo levantar la solución
@@ -94,7 +94,9 @@ URLs resultantes (reemplazá los dominios por los tuyos):
 - API pública: `https://<NGROK_DOMAIN_API>/api/v1/health`
 - Bandeja pública: `https://<NGROK_DOMAIN_APP>/`
 
-> Desarrollo sin Docker: `dotnet run --project EncodeAssistant/encode-api/encode-api.csproj` (perfil `http`, puerto 5088).
+> Desarrollo sin Docker: `dotnet run --project EncodeAssistant/encode-api/encode-api.csproj` (perfil `http`, puerto 5088). 
+> Necesita `ConnectionStrings__SqlServer` en el entorno (la misma cadena que usa el compose) apuntando a tu SQL Server local.
+> Para el frontend en dev: `cd EncodeAssistant/encondechatapp && npm start` (lee `public/assets/config.json`).
 
 ## 4. Cómo probarla de punta a punta
 
@@ -132,13 +134,20 @@ curl -X POST http://localhost:5088/api/telegram/webhook \
 Y ver el registro en los logs:
 
 ```bash
-docker compose logs -f api | grep "Mensaje recibido"
-# → Mensaje recibido | Conversación (chatId): 123456789 (private) | Emisor: @anagomez (userId: 123456789, nombre: Ana Gómez) | Texto: hola
+docker compose logs -f api | grep "Mensaje entrante"
+# → Mensaje entrante | ChatId: 123456789 | Tipo: private | Emisor: @anagomez | Texto: hola
 ```
 
 También podés hacerlo desde `EncodeAssistant/encode-api/encode-api.http` (VS Code / Rider / Swagger).
 
 Para probar la rama del comando de inicio, cambiá `"text": "hola"` por `"text": "/start"`.
+
+El mensaje queda **persistido en SQL Server** y se emite por SignalR:
+
+```bash
+curl http://localhost:5088/api/v1/contacts
+# → [{"id":"123456789","name":"Ana Gómez","username":"anagomez","lastMessage":"hola","lastMessageAt":"…Z","unreadCount":1,"isActive":true}]
+```
 
 **Paso 4 — Probar el camino completo del webhook sin la app de Telegram**
 
@@ -165,8 +174,8 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST \
 Y confirmá en los logs que el update llegó y se procesó:
 
 ```bash
-docker compose logs -f api | grep "Mensaje recibido"
-# → Mensaje recibido | Conversación (chatId): 123456789 (private) | Emisor: @anagomez (userId: 123456789, nombre: Ana Gómez) | Texto: test-tunel
+docker compose logs -f api | grep "Mensaje entrante"
+# → Mensaje entrante | ChatId: 123456789 | Tipo: private | Emisor: @anagomez | Texto: test-tunel
 ```
 
 Si el curl da 200 y el log aparece, el camino ngrok → API → webhook funciona: cualquier update que envíe Telegram va a llegar igual. `getWebhookInfo` (Paso 5) es el complemento para depurar el lado de Telegram: muestra la URL registrada, los updates pendientes y los errores recientes.
@@ -186,21 +195,35 @@ curl -s "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
 
 > Por ahora el registro es **manual**; el registro automático al levantar la solución se implementa en la Fase 5.
 
-Entonces, desde Telegram: buscá tu bot, mandale `/start` y después un texto. Debe aparecer en los logs de la API (`docker compose logs -f api`).
+Entonces, desde Telegram: buscá tu bot, mandale `/start` y después un texto. Con la bandeja abierta (Paso 7), el mensaje tiene que **aparecer solo**, sin recargar la página.
 
-**Paso 6 — Probar la respuesta de la bandeja (placeholder)**
+**Paso 6 — Responder desde la bandeja (persistencia)**
+
+La respuesta del operador se guarda y se muestra en la bandeja:
 
 ```bash
-curl -X POST http://localhost:5088/api/v1/webhook/sendMessage \
+curl -X POST http://localhost:5088/api/v1/contacts/123456789/messages \
   -H "Content-Type: application/json" \
-  -d '{"chatId": "123456789", "text": "Hola desde la bandeja"}'
-# → {"status":"Message sent"}   (la llamada real a la Bot API llega en la Fase 5)
+  -d '{"text": "Hola desde la bandeja"}'
+# → 201 {"id":2,"contactId":"123456789","text":"Hola desde la bandeja","direction":"outgoing",…}
 ```
+
+El historial completo queda en la base; al reabrir la conversación se ve igual:
+
+```bash
+curl http://localhost:5088/api/v1/contacts/123456789/messages
+curl http://localhost:5088/api/v1/contacts/123456789/read   # abre y marca leídos (POST)
+```
+
+> El **envío real a Telegram** de esa respuesta se implementa en la Fase 5 del `PLAN.md`: hoy se persiste y se emite por SignalR, pero todavía no viaja al usuario por la Bot API.
 
 **Paso 7 — Abrir la bandeja**
 
 - Local: `http://localhost:4200` — Pública: `https://<NGROK_DOMAIN_APP>/`
-- Verás el layout de dos paneles (lista de contactos + conversación). La UI es el esqueleto funcional: la lógica de contactos, historial y tiempo real (SignalR) se conecta en las Fases 4–6.
+- Vas a ver el layout de dos paneles: a la izquierda la lista de conversaciones (icono de usuario, nombre o @usuario, vista previa, hora y contador de no leídos; la más reciente arriba) y a la derecha la conversación abierta.
+- Al hacer clic en un contacto se carga el historial y se marcan los mensajes como leídos.
+- Con la conversación abierta, mandá otro mensaje al bot (Paso 3 o 5): aparece al instante y el sidebar se reordena.
+- Escribí en la caja de abajo y presioná Enter: la respuesta se guarda y se muestra como burbuja propia.
 
 ## 5. Supuestos
 
@@ -208,7 +231,7 @@ Decisiones tomadas ante lo que la spec no define:
 
 1. **Angular 22 (no LTS):** la spec pide la "última versión estable"; se usa 22 en lugar de 21 LTS.
 2. **Dos cuentas de ngrok:** se exige un túnel para el webhook y otro para la app; ngrok permite un solo agente por dominio, y gratis ofrece un dominio estático por cuenta → dos cuentas = dos authtokens (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`).
-3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram y lo registra en logs; la persistencia (SQL Server + EF Core), la cola (RabbitMQ), el tiempo real (SignalR) y el envío por la Bot API están en las Fases 2–6. SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
+3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram, lo persiste en SQL Server (EF Core) y lo emite por SignalR a la bandeja Angular, que ya lista contactos, muestra el historial, marca leídos y permite responder. Falta: RabbitMQ entre el webhook y la persistencia (Fase 3) y el envío real de las respuestas por la Bot API (Fase 5). SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
 4. **Registro manual del webhook:** hasta la Fase 5 no hay auto-registro al arrancar; mientras tanto se registra con `setWebhook` (ver §4, paso 5).
 5. **Fuera de alcance** (según spec): autenticación/usuarios, mensajes no textuales, diseño responsive y paginación del historial.
 6. **Puertos por defecto:** API `5088`, frontend `4200`, SQL Server `1433` (solo para desarrollo local; en producción no se publican).

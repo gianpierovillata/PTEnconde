@@ -1,3 +1,16 @@
-<div class="message-list">
-  <!-- Historial de mensajes (sin lógica) -->
+<div class="message-list" #contenedor>
+  @if (!hayContacto()) {
+    <p class="message-list-vacio">Elegí una conversación de la izquierda para ver los mensajes.</p>
+  } @else if (cargando()) {
+    <p class="message-list-vacio">Cargando mensajes…</p>
+  } @else if (mensajes().length === 0) {
+    <p class="message-list-vacio">Todavía no hay mensajes en esta conversación.</p>
+  }
+
+  @for (mensaje of mensajes(); track mensaje.id) {
+    <div class="message" [class.message--entrante]="mensaje.direction === 'incoming'" [class.message--saliente]="mensaje.direction === 'outgoing'">
+      <p class="message-text">{{ mensaje.text }}</p>
+      <span class="message-time">{{ mensaje.createdAt | date: 'HH:mm' }}</span>
+    </div>
+  }
 </div>

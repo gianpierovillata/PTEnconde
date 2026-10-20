@@ -1,23 +1,28 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { AppConfigService } from '../config/app-config.service';
 import { Message } from '../models/message.model';
 
+/** Mensajes de una conversación y envío de respuestas del operador. */
 @Injectable({
   providedIn: 'root',
 })
 export class ChatService {
-  // Stub: sin implementación
+  private readonly http = inject(HttpClient);
+  private readonly config = inject(AppConfigService);
+
+  private get baseUrl(): string {
+    return `${this.config.apiBaseUrl}/api/v1/contacts`;
+  }
+
+  /** Historial de la conversación, en orden cronológico. */
   getMessages(contactId: string | number): Observable<Message[]> {
-    return of([]);
+    return this.http.get<Message[]>(`${this.baseUrl}/${contactId}/messages`);
   }
 
-  // Stub: sin implementación
-  sendMessage(contactId: string | number, text: string): Observable<Message | null> {
-    return of(null);
-  }
-
-  // Stub: sin implementación
-  onNewMessage(): Observable<Message> {
-    return of(null as any);
+  /** Respuesta del operador: se persiste y se emite por SignalR. */
+  sendMessage(contactId: string | number, text: string): Observable<Message> {
+    return this.http.post<Message>(`${this.baseUrl}/${contactId}/messages`, { text });
   }
 }

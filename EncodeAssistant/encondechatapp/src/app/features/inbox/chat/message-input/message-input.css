@@ -14,6 +14,10 @@
   background: var(--input-bg);
 }
 
+.message-input-row:focus-within {
+  border-color: var(--text-primary);
+}
+
 .message-input-field {
   flex: 1;
   padding: 6px 0;
@@ -29,6 +33,10 @@
   color: var(--text-tertiary);
 }
 
+.message-input-field:disabled {
+  cursor: not-allowed;
+}
+
 .message-input-button {
   padding: 6px 14px;
   border: 1px solid var(--accent);
@@ -37,5 +45,12 @@
   font-family: var(--font-sans);
   font-size: 13px;
   border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.message-input-button:disabled {
+  background: var(--active-bg);
+  border-color: var(--input-border);
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }

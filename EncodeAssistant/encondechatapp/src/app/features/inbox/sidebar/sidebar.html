@@ -1,20 +1,49 @@
 <aside class="sidebar">
   <header class="sidebar-header">
     <h2 class="sidebar-title">Conversaciones</h2>
+    @if (contactos().length > 0) {
+      <span class="sidebar-count">{{ contactos().length }}</span>
+    }
   </header>
+
   <nav class="sidebar-list">
-    <div class="contact-card">
-      <div class="contact-avatar">U</div>
-      <div class="contact-info">
-        <div class="contact-row">
-          <span class="contact-name">Usuario</span>
-          <span class="contact-time">--:--</span>
-        </div>
-        <div class="contact-row">
-          <span class="contact-preview">Sin mensajes</span>
-          <span class="contact-badge"></span>
-        </div>
-      </div>
-    </div>
+    @if (cargando() && contactos().length === 0) {
+      <p class="sidebar-vacio">Cargando conversaciones…</p>
+    } @else if (contactos().length === 0) {
+      <p class="sidebar-vacio">Todavía no hay conversaciones. Escribile al bot en Telegram para que aparezcan acá.</p>
+    }
+
+    @for (contacto of contactos(); track contacto.id) {
+      <button
+        type="button"
+        class="contact-card"
+        [class.contact-card--activo]="estaSeleccionado(contacto)"
+        (click)="seleccionar.emit(contacto)"
+      >
+        <span class="contact-avatar">
+          <svg class="contact-avatar-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
+              fill="currentColor"
+            />
+          </svg>
+        </span>
+
+        <span class="contact-info">
+          <span class="contact-row">
+            <span class="contact-name">{{ nombreVisible(contacto) }}</span>
+            @if (horaUltimoMensaje(contacto); as fecha) {
+              <span class="contact-time">{{ fecha | date: 'HH:mm' }}</span>
+            }
+          </span>
+          <span class="contact-row">
+            <span class="contact-preview">{{ contacto.lastMessage || 'Sin mensajes' }}</span>
+            @if (contacto.unreadCount > 0) {
+              <span class="contact-badge">{{ contacto.unreadCount }}</span>
+            }
+          </span>
+        </span>
+      </button>
+    }
   </nav>
 </aside>

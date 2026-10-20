@@ -1,5 +1,5 @@
 <section class="chat">
-  <app-chat-header></app-chat-header>
-  <app-message-list></app-message-list>
-  <app-message-input></app-message-input>
+  <app-chat-header [contacto]="contacto()"></app-chat-header>
+  <app-message-list [mensajes]="mensajes()" [cargando]="cargando()" [hayContacto]="contacto() !== null"></app-message-list>
+  <app-message-input [habilitado]="puedeResponder()" (enviar)="enviar.emit($event)"></app-message-input>
 </section>

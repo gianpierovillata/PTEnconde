@@ -1,0 +1,4 @@
+{
+  "apiBaseUrl": "http://localhost:5088",
+  "signalRUrl": "http://localhost:5088/hubs/inbox"
+}

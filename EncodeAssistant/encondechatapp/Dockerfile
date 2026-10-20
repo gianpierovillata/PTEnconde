@@ -21,6 +21,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copiar archivos estáticos del build (browser)
 COPY --from=build /app/dist/encondechatapp/browser /usr/share/nginx/html
 
+# Genera config.json en runtime desde FRONTEND_API_BASE_URL / FRONTEND_SIGNALR_URL.
+COPY docker-entrypoint.sh /docker-entrypoint.d/99-app-config.sh
+RUN chmod +x /docker-entrypoint.d/99-app-config.sh
+
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

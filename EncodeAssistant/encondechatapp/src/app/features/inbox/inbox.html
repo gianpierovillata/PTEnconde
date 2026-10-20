@@ -1,4 +1,16 @@
 <div class="inbox-layout">
-  <app-sidebar></app-sidebar>
-  <app-chat></app-chat>
+  <app-sidebar
+    [contactos]="contactos()"
+    [seleccionadoId]="contactoSeleccionado()?.id ?? null"
+    [cargando]="cargandoContactos()"
+    (seleccionar)="seleccionarContacto($event)"
+  ></app-sidebar>
+
+  <app-chat
+    [contacto]="contactoSeleccionado()"
+    [mensajes]="mensajes()"
+    [cargando]="cargandoMensajes()"
+    [puedeResponder]="puedeResponder()"
+    (enviar)="enviarMensaje($event)"
+  ></app-chat>
 </div>
