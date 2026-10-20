@@ -8,6 +8,13 @@ Hagamos un plan de trabajo y creamos un archivo md solo para esto quye vamos a i
 ## Prompt 2
 En base al proyecto vamos a dockernizar la aplicacion de la api en .net 10 y crearemos un dockerfile correspondiente, que va a leer las variables de entorno del archivo .env, asi mismo crear una bd en docker de sqlserver con el dockerfile, finalmente ajustar las variables de entorno necesarias y crear el docker-compose para levantar la api y la bd en servicios separados
 
+# Prompt 3
+Lavantar los servicios en docker con docker-compose. Verficar si los enpoints creados de test, root y health estan fucionando mediante
+llamados http curl (get,post) a los enpoint expuestos
+
+# Promt 4
+Evalua la app encondechatapp y quiero que crees una pagina de inicio, va a tener un ´panel lateral y un panel central, en el lateral va a aparecer usuarios y en el central el usuario y una conversacion de chat, de momento solo crea la pagina principal en css, angular 22 componentes y opcion de servicios sin implementar, muestrame el plan para hacerlo sin crear codigo aun, luego vamos a dockernizar esta app en angular
+
 
 
 
