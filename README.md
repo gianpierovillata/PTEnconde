@@ -57,8 +57,8 @@ El `.env` **nunca se commitea** (lo ignora `.gitignore`); solo se versiona `.env
 | `TELEGRAM_WEBHOOK_SECRET` | Secreto propio (lo elegís vos) para validar el header `X-Telegram-Bot-Api-Secret-Token` cuando se implemente (Fase 5). |
 | `PUBLIC_BASE_URL` | URL **completa** del túnel de la API, ej. `https://wielder-removing-dilation.ngrok-free.dev` (sin barra final). |
 | `FRONTEND_PUBLIC_URL` | URL completa del túnel del frontend. |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos separados por coma. **Debe incluir la URL pública del frontend** (`FRONTEND_PUBLIC_URL`), sino el navegador bloquea las llamadas. |
-| `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL` | URL que usa el navegador para llegar a la API (HTTPS público para evitar *mixed content*). |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos separados por coma; debe incluir la URL pública del frontend (`FRONTEND_PUBLIC_URL`). Hoy llega al contenedor de la API pero **el middleware CORS todavía no está implementado** (Fase 4). |
+| `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL` | URLs que el navegador usará para llegar a la API y a SignalR (HTTPS público para evitar *mixed content*). Hoy se inyectan al contenedor del frontend; **la app Angular todavía no las consume** (servicios en stub, Fases 4–6). |
 | `RABBITMQ_*` | Ya vienen con valores de referencia; se usan cuando RabbitMQ entre al compose (Fase 3). |
 
 ## 3. Cómo levantar la solución
@@ -137,7 +137,39 @@ docker compose logs -f api | grep "Mensaje recibido"
 
 También podés hacerlo desde `EncodeAssistant/encode-api/encode-api.http` (VS Code / Rider / Swagger).
 
-**Paso 4 — Probar con el bot real en Telegram (de punta a punta)**
+Para probar la rama del comando de inicio, cambiá `"text": "hola"` por `"text": "/start"`.
+
+**Paso 4 — Probar el camino completo del webhook sin la app de Telegram**
+
+Este paso simula lo mismo que el Paso 3, pero atravesando el túnel público de ngrok: es el mismo camino que recorre un update real de Telegram, sin necesitar la app ni el bot.
+
+```bash
+set -a; source .env; set +a   # carga NGROK_DOMAIN_API y TELEGRAM_BOT_TOKEN
+
+curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST \
+  "https://${NGROK_DOMAIN_API}/api/telegram/webhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "update_id": 999999,
+    "message": {
+      "message_id": 1,
+      "chat": { "id": 123456789, "type": "private" },
+      "text": "test-tunel"
+    }
+  }'
+# → HTTP 200
+```
+
+Y confirmá en los logs que el update llegó y se procesó:
+
+```bash
+docker compose logs -f api | grep "Mensaje recibido"
+# → Mensaje recibido de ChatID 123456789: test-tunel
+```
+
+Si el curl da 200 y el log aparece, el camino ngrok → API → webhook funciona: cualquier update que envíe Telegram va a llegar igual. `getWebhookInfo` (Paso 5) es el complemento para depurar el lado de Telegram: muestra la URL registrada, los updates pendientes y los errores recientes.
+
+**Paso 5 — Probar con el bot real en Telegram (de punta a punta)**
 
 Registrar el webhook apuntando al túnel público de la API:
 
@@ -154,7 +186,7 @@ curl -s "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
 
 Entonces, desde Telegram: buscá tu bot, mandale `/start` y después un texto. Debe aparecer en los logs de la API (`docker compose logs -f api`).
 
-**Paso 5 — Probar la respuesta de la bandeja (placeholder)**
+**Paso 6 — Probar la respuesta de la bandeja (placeholder)**
 
 ```bash
 curl -X POST http://localhost:5088/api/v1/webhook/sendMessage \
@@ -163,7 +195,7 @@ curl -X POST http://localhost:5088/api/v1/webhook/sendMessage \
 # → {"status":"Message sent"}   (la llamada real a la Bot API llega en la Fase 5)
 ```
 
-**Paso 6 — Abrir la bandeja**
+**Paso 7 — Abrir la bandeja**
 
 - Local: `http://localhost:4200` — Pública: `https://<NGROK_DOMAIN_APP>/`
 - Verás el layout de dos paneles (lista de contactos + conversación). La UI es el esqueleto funcional: la lógica de contactos, historial y tiempo real (SignalR) se conecta en las Fases 4–6.
@@ -174,7 +206,7 @@ Decisiones tomadas ante lo que la spec no define:
 
 1. **Angular 22 (no LTS):** la spec pide la "última versión estable"; se usa 22 en lugar de 21 LTS.
 2. **Dos cuentas de ngrok:** se exige un túnel para el webhook y otro para la app; ngrok permite un solo agente por dominio, y gratis ofrece un dominio estático por cuenta → dos cuentas = dos authtokens (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`).
-3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram y lo registra en logs; la persistencia (SQL Server + EF Core), la cola (RabbitMQ), el tiempo real (SignalR) y el envío por la Bot API están en las Fases 2–6 — SQL Server y las variables de RabbitMQ ya están preparados en el compose/`.env`.
-4. **Registro manual del webhook:** hasta la Fase 5 no hay auto-registro al arrancar; mientras tanto se registra con `setWebhook` (ver §4, paso 4).
+3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram y lo registra en logs; la persistencia (SQL Server + EF Core), la cola (RabbitMQ), el tiempo real (SignalR) y el envío por la Bot API están en las Fases 2–6. SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
+4. **Registro manual del webhook:** hasta la Fase 5 no hay auto-registro al arrancar; mientras tanto se registra con `setWebhook` (ver §4, paso 5).
 5. **Fuera de alcance** (según spec): autenticación/usuarios, mensajes no textuales, diseño responsive y paginación del historial.
 6. **Puertos por defecto:** API `5088`, frontend `4200`, SQL Server `1433` (solo para desarrollo local; en producción no se publican).
