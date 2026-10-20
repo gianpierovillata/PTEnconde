@@ -13,7 +13,8 @@ Lavantar los servicios en docker con docker-compose. Verficar si los enpoints cr
 llamados http curl (get,post) a los enpoint expuestos
 
 # Promt 4
-Evalua la app encondechatapp y quiero que crees una pagina de inicio, va a tener un ´panel lateral y un panel central, en el lateral va a aparecer usuarios y en el central el usuario y una conversacion de chat, de momento solo crea la pagina principal en css, angular 22 componentes y opcion de servicios sin implementar, muestrame el plan para hacerlo sin crear codigo aun, luego vamos a dockernizar esta app en angular
+Evalua la app encondechatapp y quiero que crees una pagina de inicio, va a tener un ´panel lateral y un panel central, en el lateral va a aparecer usuarios y en el central el usuario y una conversacion de chat, de momento solo crea la pagina principal en css, angular 22 componentes y opcion de servicios sin implementar, muestrame el plan para hacerlo sin crear codigo aun, luego vamos a dockernizar esta app en angular , luego para los estilos quiero que te bases en la pagina que te voy a pasar, la idea es mantener unos estilos muy parecidos, sin transiciones, muy minimalista pero con los colores de la web https://encodelabs.com.ar/es/
+
 
 
 

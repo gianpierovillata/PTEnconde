@@ -1,0 +1,41 @@
+.message-input {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.message-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px 6px 12px;
+  background: var(--input-bg);
+}
+
+.message-input-field {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  outline: none;
+}
+
+.message-input-field::placeholder {
+  color: var(--text-tertiary);
+}
+
+.message-input-button {
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  border-radius: var(--radius-xs);
+  cursor: not-allowed;
+}

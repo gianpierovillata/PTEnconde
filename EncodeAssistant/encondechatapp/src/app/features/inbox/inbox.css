@@ -1,0 +1,6 @@
+.inbox-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: 100dvh;
+  background: var(--bg-app);
+}

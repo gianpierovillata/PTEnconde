@@ -40,6 +40,21 @@ services:
       - backend
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./EncodeAssistant/encondechatapp
+    image: ${COMPOSE_PROJECT_NAME:-enconde-inbox}-frontend
+    environment:
+      FRONTEND_API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://localhost:5088}
+      FRONTEND_SIGNALR_URL: ${FRONTEND_SIGNALR_URL:-http://localhost:5088/hubs/inbox}
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      - api
+    networks:
+      - backend
+    restart: unless-stopped
+
 networks:
   backend:
     driver: bridge
