@@ -164,7 +164,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [ ] Healthchecks + `depends_on` con condición en todos los servicios; `docker compose up` completo de punta a punta.
 
 ### Fase 8 — Documentación y entregables
-- [ ] `README.md` raíz con las 6 secciones que pide la spec (requisitos previos, `.env`, cómo levantar, cómo probar, supuestos).
+- [x] `README.md` raíz con las secciones que pide la spec (objetivo, stack, requisitos previos, `.env`, cómo levantar, cómo probar de punta a punta, supuestos). Verificado en vivo 20/10/2026: health local y público 200, webhook 200, Swagger 200.
 - [ ] Revisar/actualizar diagramas C4 Nivel 1 y 2 en `Proyecto/AnalisisC4/` (SVG o XML de draw.io).
 - [ ] ADR-001 (base de datos), ADR-002 (tiempo real), ADR-003 (flujo del webhook + topología RabbitMQ).
 - [ ] Documento de una página "Trabajo con IA".
@@ -179,7 +179,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 
 - [ ] `docker-compose.yml` funcional con **todos** los servicios (api, frontend, sqlserver, rabbitmq, ngrok).
 - [x] `.env.example` sin valores reales.
-- [ ] `README.md` completo (6 secciones).
+- [x] `README.md` completo (secciones de la spec).
 - [ ] C4 Nivel 1 y 2.
 - [ ] ADR-001, ADR-002, ADR-003.
 - [ ] Documento de trabajo con IA.
