@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -63,6 +66,42 @@ app.MapPost("/api/v1/webhook/sendMessage", (SendMessageRequest request) =>
     Console.WriteLine($"Enviando mensaje a chatId {request.ChatId}: {request.Text}");
     return Results.Ok(new { status = "Message sent" });
 }).WithName("SendMessageToTelegram");
+
+
+
+// Endpoint del Webhook para Telegram
+app.MapPost("/api/telegram/webhook", async ([FromBody] JsonElement update, ILogger<Program> logger) =>
+{
+    try
+    {
+        // Telegram envía un objeto "Update". El primer mensaje suele ser cuando el usuario inicia el bot.
+        if (update.TryGetProperty("message", out JsonElement message))
+        {
+            var chatId = message.GetProperty("chat").GetProperty("id").GetInt64();
+            
+            if (message.TryGetProperty("text", out JsonElement textProperty))
+            {
+                var text = textProperty.GetString();
+                logger.LogInformation($"Mensaje recibido de ChatID {chatId}: {text}");
+
+                // Si el usuario se conecta por primera vez, enviará el comando "/start"
+                if (text == "/start")
+                {
+                    // Aquí ejecutas la lógica de bienvenida o registro en tu sistema
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error al procesar el webhook de Telegram");
+    }
+
+    // Telegram exige recibir un HTTP 200 OK inmediatamente para no reintentar el envío
+    return Results.Ok();
+});
+
+
 
 app.Run();
 
