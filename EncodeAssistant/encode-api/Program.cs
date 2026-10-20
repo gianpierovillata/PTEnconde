@@ -3,14 +3,33 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Swagger: generación del documento OpenAPI (SwaggerGen) y UI interactiva (SwaggerUI).
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new()
+    {
+        Title = "Encode Assistant API",
+        Version = "v1",
+        Description = "Bandeja conversacional para operadores de Telegram: webhook de recepción, envío de mensajes y salud del servicio."
+    });
+});
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    // Documento OpenAPI nativo en /openapi/v1.json (solo Development).
     app.MapOpenApi();
+
+    // Swagger UI en /swagger — también solo en Development.
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Encode Assistant API v1");
+    });
 }
 
 app.UseHttpsRedirection();
