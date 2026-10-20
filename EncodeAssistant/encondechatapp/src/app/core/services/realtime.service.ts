@@ -34,7 +34,11 @@ export class RealtimeService {
     }
 
     const hub = new signalR.HubConnectionBuilder()
-      .withUrl(this.config.signalRUrl)
+      .withUrl(this.config.signalRUrl, {
+        // Mismo caso que el interceptor HTTP: sin esto ngrok free responde
+        // su página de advertencia (ERR_NGROK_6024) al negotiate desde el navegador.
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(isDevMode() ? signalR.LogLevel.Warning : signalR.LogLevel.Error)
       .build();

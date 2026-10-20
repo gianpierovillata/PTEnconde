@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, inject, isDevMode, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, isDevMode, signal, afterNextRender } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 
 /**
@@ -34,11 +34,17 @@ export class AppConfigService {
     return this.state().signalRUrl;
   }
 
-  /** Carga /assets/config.json; si falla o no existe, quedan los valores por defecto. */
+  /**
+   * Carga /assets/config.json; si falla o no existe, quedan los valores por defecto.
+   * Se espera a hidratar: durante el SSR/prerender no hay config.json ni `fetch` útil,
+   * y el render del servidor solo produce el HTML inicial.
+   */
   async cargar(): Promise<void> {
     if (!isPlatformBrowser(this.platformId)) {
       return; // en SSR no hay config.json servido por nginx
     }
+
+    await new Promise<void>((resolver) => afterNextRender(() => resolver()));
 
     try {
       const respuesta = await fetch('/assets/config.json', { cache: 'no-store' });

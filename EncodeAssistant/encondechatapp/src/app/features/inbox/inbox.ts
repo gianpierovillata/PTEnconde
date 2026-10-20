@@ -1,5 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Component, OnDestroy, afterNextRender, computed, inject, signal } from '@angular/core';
 import { PLATFORM_ID } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
 import { Sidebar } from './sidebar/sidebar';
@@ -20,8 +19,7 @@ import { RealtimeService } from '../../core/services/realtime.service';
   styleUrl: './inbox.css',
   templateUrl: './inbox.html',
 })
-export class Inbox implements OnInit, OnDestroy {
-  private readonly platformId = inject(PLATFORM_ID);
+export class Inbox implements OnDestroy {
   private readonly contactosService = inject(ContactService);
   private readonly chatService = inject(ChatService);
   private readonly realtime = inject(RealtimeService);
@@ -42,15 +40,15 @@ export class Inbox implements OnInit, OnDestroy {
   /** true mientras hay una conversación abierta (habilita el input de respuesta). */
   readonly puedeResponder = computed(() => this.contactoSeleccionado() !== null);
 
-  ngOnInit(): void {
-    // En SSR no hay API ni SignalR: la bandeja se hidrata y carga en el navegador.
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    this.cargarContactos();
-    this.suscribirTiempoReal();
-    void this.realtime.conectar();
+  constructor() {
+    // afterNextRender solo corre en el navegador (nunca en SSR/prerender), que es
+    // donde existen la API y SignalR. Con ngOnInit el componente se quedaba con el
+    // HTML prerenderizado, porque el guard de plataforma cortaba antes de cargar.
+    afterNextRender(() => {
+      this.cargarContactos();
+      this.suscribirTiempoReal();
+      void this.realtime.conectar();
+    });
   }
 
   ngOnDestroy(): void {

@@ -19,6 +19,10 @@ Evalua la app encondechatapp y quiero que crees una pagina de inicio, va a tener
 quiero que agreguenos nrok al proyecto con docker y que se configure los enpoint tanto para apiencode https://wielder-removing-dilation.ngrok-free.dev/ como para la app en angular https://trickle-batch-mollusk.ngrok-free.dev/, el puerto de angular app es 4200 y el puerto de la api es 5088  ademas verifica el auth token de cada uno  este es de la api que esta en el.env y de la app  es tambien
 
 
+# Prompt 6
+ok en base a lo que tenemos de la api, vamos a desarollar laparte de mostrar el listado de usuarios en la parte lateral y el mensaje recibo en la parte central en la app de angular, asi cada vez que un usuario envia un mensaje se muestre en la aplicacion , la bandeja de entrada sera el lado isquioero por ahora solo mostrar el  usuario con algun icono de usuario y al dar click mostrar en la parte central el usuario y el mensaje enviado,  que se mantenga los mensajes enviados, usa la bd de docker creada,  al final voy a revisar primero que este funcionando todo
+
+
 
 
 

@@ -137,6 +137,38 @@ app.MapPost("/api/v1/contacts/{chatId}/messages", async (
     return Results.Created($"/api/v1/contacts/{chatId}/messages/{mensaje.Id}", mensaje);
 });
 
+// Elimina un mensaje puntual de la conversación (limpieza de pruebas o de comandos).
+app.MapDelete("/api/v1/messages/{id:long}", async (
+    long id,
+    EncodeDbContext db,
+    CancellationToken ct) =>
+{
+    var mensaje = await db.Mensajes.FirstOrDefaultAsync(m => m.Id == id, ct);
+    if (mensaje is null)
+    {
+        return Results.NotFound(new { error = $"No existe el mensaje {id}." });
+    }
+
+    var contactoId = mensaje.ContactoId;
+    db.Mensajes.Remove(mensaje);
+
+    // Si era el último mensaje, se recalcula la vista previa del contacto.
+    var contacto = await db.Contactos.FirstOrDefaultAsync(c => c.Id == contactoId, ct);
+    if (contacto is not null)
+    {
+        var ultimo = await db.Mensajes
+            .Where(m => m.ContactoId == contactoId && m.Id != id)
+            .OrderByDescending(m => m.FechaCreacion)
+            .FirstOrDefaultAsync(ct);
+
+        contacto.UltimoTexto = ultimo?.Texto;
+        contacto.UltimaFecha = ultimo?.FechaCreacion;
+    }
+
+    await db.SaveChangesAsync(ct);
+    return Results.NoContent();
+});
+
 // Marca la conversación como leída (punto 4 de la spec: estado leído).
 app.MapPost("/api/v1/contacts/{chatId}/read", async (
     string chatId,
@@ -184,9 +216,12 @@ app.MapPost("/api/telegram/webhook", async (
         logger.LogInformation("Mensaje entrante | ChatId: {ChatId} | Tipo: {Tipo} | Emisor: {Emisor} | Texto: {Texto}",
             chatId, mensaje.Chat.Type, emisor, mensaje.Text);
 
-        if (mensaje.Text == "/start")
+        // /start es un comando del bot (Telegram lo envía al abrir el chat por primera vez),
+        // no un mensaje de la conversación: no se muestra en la bandeja.
+        if (mensaje.Text.TrimStart().StartsWith("/start", StringComparison.OrdinalIgnoreCase))
         {
-            logger.LogInformation("El usuario {Emisor} ha iniciado el bot con /start", emisor);
+            logger.LogInformation("El usuario {Emisor} ha iniciado el bot con /start (no se muestra en la bandeja)", emisor);
+            return Results.Ok();
         }
 
         // 1) Persistir en SQL Server (crea el contacto si es la primera vez).
