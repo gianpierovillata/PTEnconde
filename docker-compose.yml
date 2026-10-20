@@ -32,6 +32,11 @@ services:
       ASPNETCORE_URLS: http://+:8080
       # Doble guion bajo = separador de sección en la configuración de .NET.
       ConnectionStrings__SqlServer: "Server=${SQLSERVER_HOST:-sqlserver},1433;Database=${SQLSERVER_DB:-EncodeInbox};User Id=${SQLSERVER_USER:-sa};Password=${SQLSERVER_SA_PASSWORD};TrustServerCertificate=True"
+      # URL pública (túnel ngrok de la API): la usará el registro automático
+      # del webhook de Telegram (Fase 5).
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # Orígenes permitidos para CORS (incluye la app servida por ngrok).
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
     ports:
       - "${API_HTTP_PORT:-5088}:8080"
     depends_on:
@@ -51,6 +56,52 @@ services:
       - "${FRONTEND_PORT:-4200}:80"
     depends_on:
       - api
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # ngrok — dos túneles públicos con URL estática, uno por servicio.
+  #
+  #   ngrok-api -> https://<NGROK_DOMAIN_API>  -> API    (host ${API_HTTP_PORT} = 5088)
+  #   ngrok-app -> https://<NGROK_DOMAIN_APP>  -> Angular (host ${FRONTEND_PORT} = 4200)
+  #
+  # Cada túnel usa el authtoken de su propia cuenta de ngrok
+  # (NGROK_AUTHTOKEN_API / NGROK_AUTHTOKEN_APP), por eso son dos servicios.
+  #
+  # El destino apunta al host (host.docker.internal) y no a los nombres de
+  # servicio: así funciona igual si la API / el frontend corren en el compose
+  # (`dotnet run`, `ng serve`) o fuera de Docker. Si preferís salir por la red
+  # interna, reemplazá `host.docker.internal:${API_HTTP_PORT}` por `api:8080`
+  # y `host.docker.internal:${FRONTEND_PORT}` por `frontend:80`.
+  # ---------------------------------------------------------------------------
+  ngrok-api:
+    image: ngrok/ngrok:latest
+    command:
+      - http
+      - "--authtoken=${NGROK_AUTHTOKEN_API:?Definí NGROK_AUTHTOKEN_API en el .env}"
+      - "--url=https://${NGROK_DOMAIN_API:?Definí NGROK_DOMAIN_API en el .env}"
+      - "host.docker.internal:${API_HTTP_PORT:-5088}"
+    extra_hosts:
+      # Permite resolver host.docker.internal en Linux (Docker >= 20.10).
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - api
+    networks:
+      - backend
+    restart: unless-stopped
+
+  ngrok-app:
+    image: ngrok/ngrok:latest
+    command:
+      - http
+      - "--authtoken=${NGROK_AUTHTOKEN_APP:?Definí NGROK_AUTHTOKEN_APP en el .env}"
+      - "--url=https://${NGROK_DOMAIN_APP:?Definí NGROK_DOMAIN_APP en el .env}"
+      - "host.docker.internal:${FRONTEND_PORT:-4200}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - frontend
     networks:
       - backend
     restart: unless-stopped

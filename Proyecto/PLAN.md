@@ -52,7 +52,7 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 
 - **Compose:** `COMPOSE_PROJECT_NAME`.
 - **Telegram:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_API_BASE_URL`.
-- **ngrok:** `NGROK_AUTHTOKEN`, `NGROK_REGION`, `NGROK_DOMAIN`, `PUBLIC_BASE_URL`.
+- **ngrok:** `NGROK_AUTHTOKEN_API`, `NGROK_AUTHTOKEN_APP`, `NGROK_DOMAIN_API`, `NGROK_DOMAIN_APP`, `PUBLIC_BASE_URL`, `FRONTEND_PUBLIC_URL` (no se usa `NGROK_REGION`: el agente v3 no acepta el flag).
 - **API:** `ASPNETCORE_ENVIRONMENT`, `API_HTTP_PORT`, `API_HTTPS_PORT`, `CORS_ALLOWED_ORIGINS`.
 - **Frontend:** `FRONTEND_PORT`, `FRONTEND_API_BASE_URL`, `FRONTEND_SIGNALR_URL`.
 - **SQL Server:** `SQLSERVER_HOST`, `SQLSERVER_PORT`, `SQLSERVER_DB`, `SQLSERVER_USER`, `SQLSERVER_SA_PASSWORD`, `SQLSERVER_CONNECTION_STRING`.
@@ -94,6 +94,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [ ] Credenciales fuertes y distintas por servicio; usuario RabbitMQ dedicado con permisos mínimos sobre su vhost/cola.
 - [ ] CORS restringido con `CORS_ALLOWED_ORIGINS` (sin `AllowAnyOrigin` en producción).
 - [ ] ngrok expone solo el endpoint del webhook, no la API completa.
+  - **Excepción pedida por el usuario (20/10/2026):** se exponen **dos** túneles — la API completa (`ngrok-api` → 5088) y la app Angular (`ngrok-app` → 4200) — cada uno con su propio authtoken y URL estática. Revisar antes de producción si conviene restringir el túnel de la API solo a `/api/v1/webhook/*`.
 - [ ] `.dockerignore` en cada contexto de build (evitar `bin/`, `obj/`, `node_modules/`, `.env` dentro de la imagen).
 - [ ] Imágenes con versiones fijadas (no `latest`), `healthchecks` en compose y `depends_on` con condición de salud.
 - [ ] HTTPS/redirects y headers de seguridad en el frontend servido por nginx.
@@ -157,7 +158,9 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] Verificado: `docker compose up` levanta `api` y `sqlserver`; `/health` responde 200 y SQL Server acepta consultas.
 - [ ] Sumar RabbitMQ al compose.
 - [ ] Sumar el frontend (Angular) al compose (build multi-stage node→nginx, usuario no root, `.dockerignore`).
-- [ ] Sumar ngrok al compose y exponer solo el webhook con URL pública.
+- [x] Sumar ngrok al compose: dos servicios (`ngrok-api`, `ngrok-app`) con URL estática por cuenta — API `https://wielder-removing-dilation.ngrok-free.dev` → host 5088 y Angular `https://trickle-batch-mollusk.ngrok-free.dev` → host 4200. Authtokens verificados.
+  - Verificado 20/10/2026: `curl https://wielder-removing-dilation.ngrok-free.dev/api/v1/health` → `{"status":"Healthy"}` y `https://trickle-batch-mollusk.ngrok-free.dev/` → HTTP 200.
+  - Un ngrok local con el mismo dominio bloquea al servicio (`ERR_NGROK_334`): usar uno u otro, no ambos.
 - [ ] Healthchecks + `depends_on` con condición en todos los servicios; `docker compose up` completo de punta a punta.
 
 ### Fase 8 — Documentación y entregables
@@ -187,8 +190,9 @@ Aplica a todas las fases (revisar antes de cada commit):
 - Git limpio en `main` con 6 commits (`085b43b` … `2c5872c`) e `origin` configurado.
 - **Backend:** `encode-api` (minimal API .NET 10) con endpoints placeholder (`GET /`, `GET /api/v1/health`, `POST /api/v1/webhook/receiveMessage`, `POST /api/v1/webhook/sendMessage`). Entidades borrador (`Usuario`, `Mensaje`, `Operador`) dentro del host; services `MensajeService`/`UsuarioService` vacíos. Pendiente: estructura Clean Architecture (Fase 1).
 - **Frontend:** `encondechatapp` (Angular 22 + SSR) con feature `inbox` (sidebar + chat + chat-header + message-list + message-input), tokens de diseño y routing listos; servicios/modelos en stub. Dockerizado (nginx, SPA). Pendiente: lógica real (Fases 4–6).
-- **Docker:** `docker compose up` levanta `api` + `sqlserver` + `frontend`. Verificado `/health` 200 y SQL Server operativo. La base `EncodeInbox` la creará EF Core en la Fase 2. Faltan `rabbitmq`, `ngrok`, healthchecks y `.dockerignore`.
+- **Docker:** `docker compose up` levanta `sqlserver` + `api` + `frontend` + `ngrok-api` + `ngrok-app`. Verificado `/api/v1/health` 200 y SQL Server operativo. La base `EncodeDb` la creará EF Core en la Fase 2. Faltan `rabbitmq`, healthchecks y `.dockerignore`.
+- **ngrok (nuevo, 20/10/2026):** dos túneles públicos en Docker, uno por cuenta — `ngrok-api` → `https://wielder-removing-dilation.ngrok-free.dev` (host 5088) y `ngrok-app` → `https://trickle-batch-mollusk.ngrok-free.dev` (host 4200). Los dos authtoken (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`) verificados; respuestas 200 desde la URL pública. Variables nuevas en `.env.example`: `NGROK_DOMAIN_API/APP`, `PUBLIC_BASE_URL`, `FRONTEND_PUBLIC_URL`; `CORS_ALLOWED_ORIGINS` y las URLs de `FRONTEND_*` apuntan ya al túnel HTTPS de la API.
 - **Inconsistencias corregidas hoy:** `AGENTS.md`, `PLAN_FRONTEND.md`, `Program.cs`, `encode-api.http`, namespaces del dominio y `EncodeAssistant.slnx` (ya referencia `encode-api`).
-- Angular CLI y ngrok **no instalados** (Fase 0.5). Docker funciona pero su PATH no está en la sesión de shell actual.
+- Angular CLI **no instalado**; ngrok **sí** (`3.39.11`) — se usa solo el agente de Docker. Docker funciona pero su PATH a veces no está en la sesión de shell actual.
 - Diagramas C4 (Nivel 1 y 2) creados en draw.io; pendientes de revisión contra la arquitectura final.
 - Pendiente: Fases 0.5 y 1 a 9.
