@@ -22,6 +22,10 @@ Hagamos un plan de trabajo y creamos un archivo md solo para esto quye vamos a i
 ## Prompt 4
 Evalua la app encondechatapp y quiero que crees una pagina de inicio, va a tener un ´panel lateral y un panel central, en el lateral va a aparecer usuarios y en el central el usuario y una conversacion de chat, de momento solo crea la pagina principal en css, angular 22 componentes y opcion de servicios sin implementar, muestrame el plan para hacerlo sin crear codigo aun, luego vamos a dockernizar esta app en angular , luego para los estilos quiero que te bases en la pagina que te voy a pasar, la idea es mantener unos estilos muy parecidos, sin transiciones, muy minimalista pero con los colores de la web https://encodelabs.com.ar/es/
 
+# Prompt 6
+ok en base a lo que tenemos de la api, vamos a desarrollar la parte de mostrar el listado de usuarios en la parte lateral y el mensaje recibo en la parte central en la app de angular, asi cada vez que un usuario envia un mensaje se muestre en la aplicacion , la bandeja de entrada sera el lado izquierdo, por ahora solo mostrar el  usuario con algun icono de usuario y al dar click mostrar en la parte central el usuario y el mensaje enviado,  que se mantenga los mensajes enviados, usa la bd de docker creada,  al final voy a revisar primero que este funcionando todo y luego verificas el correcto estado de los dos proyectos api y front
+
+
 
 
 

@@ -176,7 +176,8 @@ Aplica a todas las fases (revisar antes de cada commit):
 ### Fase 8 — Documentación y entregables
 - [x] `README.md` raíz con las secciones que pide la spec (objetivo, stack, requisitos previos, `.env`, cómo levantar, cómo probar de punta a punta, supuestos). Verificado en vivo 20/10/2026: health local y público 200, webhook 200, Swagger 200.
 - [ ] Revisar/actualizar diagramas C4 Nivel 1 y 2 en `Proyecto/AnalisisC4/` (SVG o XML de draw.io).
-- [ ] ADR-001 (base de datos), ADR-002 (tiempo real), ADR-003 (flujo del webhook + topología RabbitMQ).
+- [ ] ADR-001 (base de datos) y ADR-002 (tiempo real) — **[x] escritos** en `Proyecto/ADRs/` (21/10/2026).
+- [ ] ADR-003 (flujo del webhook + topología RabbitMQ).
 - [ ] Documento de una página "Trabajo con IA".
 - [ ] Actualizar `AGENTS.md` (commits, comandos nuevos, servicios del compose) y `README.md` de la raíz.
 - [ ] Respuestas a las preguntas bonus (opcional, puntos extra).
@@ -191,7 +192,7 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] `.env.example` sin valores reales.
 - [x] `README.md` completo (secciones de la spec).
 - [ ] C4 Nivel 1 y 2.
-- [ ] ADR-001, ADR-002, ADR-003.
+- [ ] ADR-001, ADR-002, ADR-003. → ADR-001 y ADR-002 listos (`Proyecto/ADRs/`); falta ADR-003.
 - [ ] Documento de trabajo con IA.
 - [ ] Repositorio sin `.env` ni secretos.
 
@@ -209,4 +210,5 @@ Aplica a todas las fases (revisar antes de cada commit):
   - **Ojo en el navegador:** ngrok free responde su página de advertencia (`ERR_NGROK_6024`) a las peticiones que vienen de un navegador. La app manda `ngrok-skip-browser-warning` (interceptor HTTP + `withUrl` de SignalR); sin eso el sidebar queda vacío y el navegador reporta un falso error de CORS.
 - **Entorno:** no hace falta Angular CLI global (se usa el de `node_modules`); el grupo `docker` no está cargado en la shell del agente (encadenar con `sg docker -c "..."`); hay Chrome headless para verificar el render y la consola.
 - Diagramas C4 (Nivel 1 y 2) creados en draw.io; pendientes de revisión contra la arquitectura final.
+- ADRs: **ADR-001** (SQL Server + EF Core) y **ADR-002** (SignalR) escritos en `Proyecto/ADRs/` con la plantilla de la spec; falta **ADR-003** (flujo del webhook + topología de RabbitMQ), que depende de la Fase 3.
 - Pendiente: Fases 1, 3, 5 y 8 (documentación/entregables), más los tests de la Fase 9. La Fase 0.5 quedó cubierta.

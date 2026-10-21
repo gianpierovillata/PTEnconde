@@ -172,6 +172,10 @@ curl http://localhost:5088/api/v1/contacts
 # → [{"id":"123456789","name":"Ana Gómez","username":"anagomez","lastMessage":"hola","lastMessageAt":"…Z","unreadCount":1,"isActive":true}]
 ```
 
+
+Tambien se muestra el mensaje en la app de angular si esta esta levantada en el docker al ingresar a la url local 
+http://localhost:5088/ o la url public de ngrok para la app configurada en el .env 
+
 **Paso 4 — Probar el camino completo del webhook sin la app de Telegram**
 
 Este paso simula lo mismo que el Paso 3, pero atravesando el túnel público de ngrok: es el mismo camino que recorre un update real de Telegram, sin necesitar la app ni el bot.
@@ -291,10 +295,20 @@ Decisiones tomadas ante lo que la spec no define:
 
 1. **Angular 22 (no LTS):** la spec pide la "última versión estable"; se usa 22 en lugar de 21 LTS.
 2. **Dos cuentas de ngrok:** se exige un túnel para el webhook y otro para la app; ngrok permite un solo agente por dominio, y gratis ofrece un dominio estático por cuenta → dos cuentas = dos authtokens (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`).
-3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram, lo persiste en SQL Server (EF Core) y lo emite por SignalR a la bandeja Angular, que lista contactos, muestra el historial, marca leídos, permite responder y borrar conversaciones (individual o toda la bandeja, con confirmación). Las respuestas del operador **viajan al usuario por la Bot API de Telegram** (con estado de entrega: `delivered`, `deliveryError`, `telegramMessageId`). Falta: RabbitMQ entre el webhook y la persistencia (Fase 3) y el registro automático del webhook al arrancar (Fase 5, hoy es manual). SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
-4. **Registro manual del webhook:** el auto-registro al arrancar todavía no está implementado; por ahora se registra con `setWebhook` (ver §4, paso 5).
+
+3. **Registro manual del webhook:** el auto-registro al arrancar todavía no está implementado; por ahora se registra con `setWebhook` (ver §4, paso 5).
 5. **Envío a Telegram sin bloquear la respuesta:** si la Bot API rechaza el mensaje (chat inexistente, bot bloqueado, token inválido o timeout), la API **no devuelve error**: guarda el mensaje igual, lo marca con `delivered: false` y el motivo en `deliveryError`, y responde `201` con una `advertencia`. Así la conversación nunca queda incompleta.
 5. **Fuera de alcance** (según spec): autenticación/usuarios, mensajes no textuales, diseño responsive y paginación del historial.
 6. **Puertos por defecto:** API `5088`, frontend `4200`, SQL Server `1433` (solo para desarrollo local; en producción no se publican).
 7. **Esquema sin migraciones:** la base se crea con `EnsureCreated()` al arrancar (no hay migraciones de EF Core todavía). Es suficiente para la prueba, pero un cambio de modelo no se aplica sobre una base existente: hay que recrear el volumen (`docker compose down -v`). Las migraciones entran junto con la separación en capas (Fase 1).
 8. **`/start` no se muestra:** es el comando de conexión del bot, no un mensaje del usuario. Se registra en el log y se descarta; el contacto se crea con el primer mensaje real (ver §4, paso 3).
+
+
+## Tareas que quedaron pendiente
+1. Implementacion del sistema de mensajeria con colas de mensajes mediante RabbitMQ
+2. Mejora en el diseno a nivel de clean architecture, de momento hay clases con record, falta crear interfaces del dominio 
+para tener contractos a utilizar por servicios, los dto no estan seperados en lso servicios, y  la capa infraestructura solo tiene  el diseno de los modelos de EF y el DBContext para mapeo entre las clases de dominio y las tablas de la BD
+3. Mejora del diseno de la app con encabezado, intergrar la opcion de usuario operador segun su departamento, de momento solo cumple la funcion de chat sin identificar quien responde el chat, queda anonimo el operado.
+4. Mejora del realtime mas seguridad y autenticacion aunque no esta especificado en el spec development document
+5. Faltaron los test unitarios y crear un proyecto de test con XUnit o MStest o cualquiera del SDK .NET 10 para automatizacion y CI/CD aunque se crearon test manuales y se muestra como probar el proyecto de punta a punta.
+6. EL ADR 003 no se implemento ya que habia que desarollar el sistema de mensajeria en colas, por cuestiones de tiempo, se deja para una version futura del mvp
