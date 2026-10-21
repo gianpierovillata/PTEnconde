@@ -50,6 +50,10 @@ var cadenaSql = builder.Configuration.GetConnectionString("SqlServer")
 builder.Services.AddDbContext<EncodeDbContext>(options => options.UseSqlServer(cadenaSql));
 builder.Services.AddScoped<BandejaService>();
 
+// --- Cliente de la Bot API de Telegram (envío de las respuestas del operador) --
+// La URL base sale de TELEGRAM_API_BASE_URL y el token de TELEGRAM_BOT_TOKEN.
+builder.Services.AddHttpClient<ITelegramBotClient, TelegramBotClient>();
+
 var app = builder.Build();
 
 // --- Esquema de la base (EnsureCreated: crea la base del ConnectionString) ----
@@ -145,12 +149,12 @@ app.MapGet("/api/v1/contacts/{chatId}/messages", async (string chatId, BandejaSe
     return Results.Ok(mensajes);
 });
 
-// Respuesta del operador: se persiste y se emite por SignalR a todas las bandejas.
-// (El envío real a Telegram llega en la Fase 5 del PLAN.)
+// Respuesta del operador: se persiste, se envía al usuario por Telegram y se emite por SignalR.
 app.MapPost("/api/v1/contacts/{chatId}/messages", async (
     string chatId,
     [FromBody] RespuestaOperador body,
     BandejaService bandeja,
+    ITelegramBotClient telegram,
     IHubContext<InboxHub> hub,
     CancellationToken ct) =>
 {
@@ -160,10 +164,29 @@ app.MapPost("/api/v1/contacts/{chatId}/messages", async (
         return Results.BadRequest(new { error = "El campo 'text' es obligatorio." });
     }
 
-    var (contacto, mensaje) = await bandeja.GuardarSalienteAsync(chatId, texto, ct);
+    // Persiste + envía a Telegram + guarda el resultado de la entrega.
+    var (contacto, mensaje) = await bandeja.ResponderAsync(chatId, texto, telegram, ct);
 
     await hub.Clients.All.SendAsync("NuevoMensaje", mensaje, ct);
     await hub.Clients.All.SendAsync("ContactoActualizado", contacto, ct);
+
+    // Si Telegram rechazó el envío, el mensaje igual quedó guardado y se avisa en la respuesta.
+    // Se devuelve 201 para no perder el registro; la app decide si muestra el aviso.
+    if (mensaje.Delivered == false)
+    {
+        return Results.Created($"/api/v1/contacts/{chatId}/messages/{mensaje.Id}", new
+        {
+            mensaje.Id,
+            mensaje.ContactId,
+            mensaje.Text,
+            mensaje.Direction,
+            mensaje.CreatedAt,
+            mensaje.Read,
+            mensaje.Delivered,
+            mensaje.DeliveryError,
+            advertencia = $"El mensaje se guardó, pero Telegram no lo entregó: {mensaje.DeliveryError}"
+        });
+    }
 
     return Results.Created($"/api/v1/contacts/{chatId}/messages/{mensaje.Id}", mensaje);
 });

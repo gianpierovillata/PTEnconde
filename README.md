@@ -53,7 +53,7 @@ El `.env` **nunca se commitea** (lo ignora `.gitignore`); solo se versiona `.env
 
 | Variable | Qué poner |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | Token que entregó BotFather. Hoy se usa para registrar el webhook a mano (ver §4); la API aún no la recibe desde el compose. |
+| `TELEGRAM_BOT_TOKEN` | Token que entregó BotFather. Lo usan dos cosas: la API para **enviar las respuestas del operador** (`sendMessage`) y el `setWebhook` manual (ver §4). El compose ya se lo pasa a la API. |
 | `TELEGRAM_WEBHOOK_SECRET` | Secreto propio (lo elegís vos) para validar el header `X-Telegram-Bot-Api-Secret-Token` cuando se implemente (Fase 5). |
 | `PUBLIC_BASE_URL` | URL **completa** del túnel de la API, ej. `https://wielder-removing-dilation.ngrok-free.dev` (sin barra final). |
 | `FRONTEND_PUBLIC_URL` | URL completa del túnel del frontend. |
@@ -111,7 +111,7 @@ Referencia rápida de la API (Swagger en `http://localhost:5088/swagger`):
 | `POST` | `/api/telegram/webhook` | Recibe el `Update` de Telegram, persiste el mensaje y lo emite por SignalR. `/start` se descarta (ver Paso 3). |
 | `GET` | `/api/v1/contacts` | Contactos del sidebar, ordenados por último mensaje. |
 | `GET` | `/api/v1/contacts/{chatId}/messages` | Historial de la conversación, en orden cronológico. |
-| `POST` | `/api/v1/contacts/{chatId}/messages` | Respuesta del operador: se persiste y se emite por SignalR. |
+| `POST` | `/api/v1/contacts/{chatId}/messages` | Respuesta del operador: se persiste, se envía al usuario por la Bot API de Telegram y se emite por SignalR. |
 | `POST` | `/api/v1/contacts/{chatId}/read` | Marca la conversación como leída (no leídos en 0). |
 | `DELETE` | `/api/v1/contacts/{chatId}` | Elimina una conversación completa (contacto + mensajes). |
 | `DELETE` | `/api/v1/contacts` | Vacía la bandeja. Devuelve `{"eliminadas": n}`. |
@@ -216,16 +216,28 @@ curl -s "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
 
 Entonces, desde Telegram: buscá tu bot, mandale `/start` y después un texto. Con la bandeja abierta (Paso 7), el mensaje tiene que **aparecer solo**, sin recargar la página.
 
-**Paso 6 — Responder desde la bandeja (persistencia)**
+**Paso 6 — Responder desde la bandeja (persistencia + envío real a Telegram)**
 
-La respuesta del operador se guarda y se muestra en la bandeja:
+La respuesta del operador se guarda **y viaja al usuario por la Bot API de Telegram**:
 
 ```bash
 curl -X POST http://localhost:5088/api/v1/contacts/123456789/messages \
   -H "Content-Type: application/json" \
   -d '{"text": "Hola desde la bandeja"}'
-# → 201 {"id":2,"contactId":"123456789","text":"Hola desde la bandeja","direction":"outgoing",…}
+# → 201 {"id":2,"contactId":"123456789","text":"Hola desde la bandeja","direction":"outgoing",
+#         "delivered":true,"deliveryError":null,…}
 ```
+
+Usá el `chatId` **real** del contacto (el mismo `id` que devuelve `GET /api/v1/contacts`); si probás con un chat inexistente, Telegram rechaza el envío:
+
+```bash
+curl -X POST http://localhost:5088/api/v1/contacts/999999/messages \
+  -H "Content-Type: application/json" -d '{"text": "hola"}'
+# → 201 {"delivered":false,"deliveryError":"Bad Request: chat not found",
+#         "advertencia":"El mensaje se guardó, pero Telegram no lo entregó: …"}
+```
+
+El mensaje se persiste **siempre**, incluso si Telegram lo rechaza, para no perder el registro de la conversación: en ese caso queda con `delivered: false` y el motivo en `deliveryError`, y la respuesta trae una `advertencia`. Se devuelve `201` igual para que el mensaje no se descarte.
 
 El historial completo queda en la base; al reabrir la conversación se ve igual:
 
@@ -234,7 +246,7 @@ curl http://localhost:5088/api/v1/contacts/123456789/messages
 curl -X POST http://localhost:5088/api/v1/contacts/123456789/read   # abre y marca leídos
 ```
 
-> El **envío real a Telegram** de esa respuesta se implementa en la Fase 5 del `PLAN.md`: hoy se persiste y se emite por SignalR, pero todavía no viaja al usuario por la Bot API.
+> Cada mensaje saliente guarda además el `telegramMessageId` que devolvió Telegram al aceptarlo, y `delivered: null` en los entrantes (donde no aplica).
 
 **Paso 6 bis — Borrar conversaciones (también desde la UI)**
 
@@ -275,8 +287,9 @@ Decisiones tomadas ante lo que la spec no define:
 
 1. **Angular 22 (no LTS):** la spec pide la "última versión estable"; se usa 22 en lugar de 21 LTS.
 2. **Dos cuentas de ngrok:** se exige un túnel para el webhook y otro para la app; ngrok permite un solo agente por dominio, y gratis ofrece un dominio estático por cuenta → dos cuentas = dos authtokens (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`).
-3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram, lo persiste en SQL Server (EF Core) y lo emite por SignalR a la bandeja Angular, que lista contactos, muestra el historial, marca leídos, permite responder y borrar conversaciones (individual o toda la bandeja, con confirmación). Falta: RabbitMQ entre el webhook y la persistencia (Fase 3) y el envío real de las respuestas por la Bot API (Fase 5). SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
-4. **Registro manual del webhook:** hasta la Fase 5 no hay auto-registro al arrancar; mientras tanto se registra con `setWebhook` (ver §4, paso 5).
+3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram, lo persiste en SQL Server (EF Core) y lo emite por SignalR a la bandeja Angular, que lista contactos, muestra el historial, marca leídos, permite responder y borrar conversaciones (individual o toda la bandeja, con confirmación). Las respuestas del operador **viajan al usuario por la Bot API de Telegram** (con estado de entrega: `delivered`, `deliveryError`, `telegramMessageId`). Falta: RabbitMQ entre el webhook y la persistencia (Fase 3) y el registro automático del webhook al arrancar (Fase 5, hoy es manual). SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
+4. **Registro manual del webhook:** el auto-registro al arrancar todavía no está implementado; por ahora se registra con `setWebhook` (ver §4, paso 5).
+5. **Envío a Telegram sin bloquear la respuesta:** si la Bot API rechaza el mensaje (chat inexistente, bot bloqueado, token inválido o timeout), la API **no devuelve error**: guarda el mensaje igual, lo marca con `delivered: false` y el motivo en `deliveryError`, y responde `201` con una `advertencia`. Así la conversación nunca queda incompleta.
 5. **Fuera de alcance** (según spec): autenticación/usuarios, mensajes no textuales, diseño responsive y paginación del historial.
 6. **Puertos por defecto:** API `5088`, frontend `4200`, SQL Server `1433` (solo para desarrollo local; en producción no se publican).
 7. **Esquema sin migraciones:** la base se crea con `EnsureCreated()` al arrancar (no hay migraciones de EF Core todavía). Es suficiente para la prueba, pero un cambio de modelo no se aplica sobre una base existente: hay que recrear el volumen (`docker compose down -v`). Las migraciones entran junto con la separación en capas (Fase 1).

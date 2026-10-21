@@ -22,6 +22,9 @@ quiero que agreguenos nrok al proyecto con docker y que se configure los enpoint
 # Prompt 6
 ok en base a lo que tenemos de la api, vamos a desarollar laparte de mostrar el listado de usuarios en la parte lateral y el mensaje recibo en la parte central en la app de angular, asi cada vez que un usuario envia un mensaje se muestre en la aplicacion , la bandeja de entrada sera el lado isquioero por ahora solo mostrar el  usuario con algun icono de usuario y al dar click mostrar en la parte central el usuario y el mensaje enviado,  que se mantenga los mensajes enviados, usa la bd de docker creada,  al final voy a revisar primero que este funcionando todo
 
+# Prompt 7
+vamos a revisar la api, hay que implementar el enviar mensajes al usuario de telegram que es respondido por un operador desde la app de angular, tenemos que implementar el enpoint o los enpoints especificos para que el usuario pueda recibir la respuesta del operador, de momento solo la implementacion de la api y probar que se esta recibiendo el mensaje en el usuario de telegram, implementamos todo incluido la persistencia en bd para tener un registro de la conversacion
+
 
 
 

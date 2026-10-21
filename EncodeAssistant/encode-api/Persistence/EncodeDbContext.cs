@@ -47,6 +47,7 @@ namespace EncodeAssistant.EncodeApi.Persistence
                 entity.Property(m => m.Texto).HasMaxLength(4000);
                 entity.Property(m => m.Direccion).HasMaxLength(16);
                 entity.Property(m => m.Leido).HasDefaultValue(false);
+                entity.Property(m => m.ErrorEntrega).HasMaxLength(500);
                 entity.Property(m => m.FechaCreacion).HasDefaultValueSql("SYSUTCDATETIME()");
 
                 entity.HasIndex(m => new { m.ContactoId, m.FechaCreacion });

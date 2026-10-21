@@ -37,8 +37,12 @@ Accept: application/json
 
 ###
 
-### Respuesta del operador: se persiste y se emite por SignalR
-### (el envío real a la Bot API se implementa en la Fase 5).
+### Respuesta del operador: se persiste, se ENVÍA al usuario por la Bot API de
+### Telegram y se emite por SignalR. Requiere TELEGRAM_BOT_TOKEN configurado.
+### Devuelve 201 con "delivered": true si Telegram lo aceptó (incluye
+### telegramMessageId), o 201 con "delivered": false + "deliveryError" + "advertencia"
+### si Telegram lo rechazó: el mensaje igual queda guardado, no se pierde.
+### El chatId es el mismo Id del contacto (el chat de Telegram).
 POST {{encode_api_HostAddress}}/api/v1/contacts/123456789/messages
 Content-Type: application/json
 

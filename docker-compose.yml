@@ -36,6 +36,10 @@ services:
       # URL pública (túnel ngrok de la API): la usará el registro automático
       # del webhook de Telegram (Fase 5).
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # Credenciales de la Bot API: la API las usa para enviar las respuestas
+      # del operador al usuario de Telegram.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Definí TELEGRAM_BOT_TOKEN en el .env}
+      TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-https://api.telegram.org}
       # Orígenes permitidos para CORS (incluye la app servida por ngrok).
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
     ports:

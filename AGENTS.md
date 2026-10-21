@@ -15,7 +15,7 @@ Prueba técnica para **encodelabs**: una bandeja web ("bandeja conversacional") 
 
 **No** existen todavía ADRs, tests ni CI. No asumir que existan. Sí existen el `.gitignore` raíz, `.env.example`, los Dockerfiles y `docker-compose.yml` (servicios `sqlserver`, `api`, `frontend`, `ngrok-api` y `ngrok-app`).
 
-La bandeja ya es funcional de punta a punta: webhook → SQL Server → SignalR → Angular. Lo que falta está en `Proyecto/PLAN.md` (RabbitMQ, separación en capas, envío real a Telegram, entregables).
+La bandeja ya es funcional de punta a punta: webhook → SQL Server → SignalR → Angular, y las respuestas del operador viajan al usuario por la Bot API de Telegram. Lo que falta está en `Proyecto/PLAN.md` (RabbitMQ, separación en capas, registro automático del webhook, entregables).
 
 ## Estructura de `encode-api`
 
@@ -25,6 +25,7 @@ No hay capas separadas todavía (todo vive en el host, Fase 1 pendiente):
 Program.cs                        todos los endpoints, CORS, SignalR, EnsureCreated
 Domain/Entities/                  Contacto, Mensaje, Usuario, Operador
 Aplication/Services/              BandejaService (casos de uso), MensajeService, UsuarioService
+Aplication/Services/TelegramBotClient.cs  cliente de la Bot API (sendMessage, estado de entrega)
 Persistence/EncodeDbContext.cs    tablas, índices y borrado en cascada
 Hubs/InboxHub.cs                  hub de SignalR (/hubs/inbox)
 ```
@@ -91,6 +92,7 @@ docker compose --env-file .env.example config   # validar sin tocar el .env loca
 - En esta máquina, la shell del agente puede no tener cargado el grupo `docker` (`permission denied` en el socket). Encadenar con `sg docker -c "..."` o re-loguear.
 - Si se cambia `SQLSERVER_SA_PASSWORD` después del primer arranque, hay que recrear el volumen (`docker compose down -v`): SQL Server solo aplica la contraseña la primera vez.
 - La base se llama **`EncodeDb`** (`SQLSERVER_DB`) y se crea con `EnsureCreated()`: un cambio de modelo **no** se aplica sobre una base existente, hay que recrear el volumen.
+- La API recibe `TELEGRAM_BOT_TOKEN` y `TELEGRAM_API_BASE_URL` desde el compose para **enviar las respuestas del operador** (Bot API). Sin token, el envío falla pero el mensaje igual se persiste con `delivered: false`.
 - El contenedor de SQL Server **no** trae `sqlcmd`. Para consultar, usar `mcr.microsoft.com/mssql-tools` con `--network enconde-inbox_backend`.
 - `RabbitMQ` todavía no está en el compose (ver Fase 7 de `Proyecto/PLAN.md`).
 

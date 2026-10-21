@@ -27,7 +27,9 @@ namespace EncodeAssistant.EncodeApi.Aplication.Services
         string Text,
         string Direction,
         DateTime CreatedAt,
-        bool Read);
+        bool Read,
+        bool? Delivered,
+        string? DeliveryError);
 
     /// <summary>
     /// Casos de uso de la bandeja: contactos y mensajes, con persistencia en SQL Server.
@@ -143,6 +145,30 @@ namespace EncodeAssistant.EncodeApi.Aplication.Services
         }
 
         /// <summary>
+        /// Respuesta del operador de punta a punta: persiste el mensaje saliente,
+        /// lo envía al usuario por la Bot API de Telegram y guarda el resultado de la entrega.
+        ///
+        /// El mensaje se persiste SIEMPRE, incluso si Telegram rechaza el envío: así la
+        /// conversación queda completa y la bandeja puede mostrar que no se entregó.
+        /// </summary>
+        public async Task<(ContactDto Contacto, MessageDto Mensaje)> ResponderAsync(
+            string chatId, string texto, ITelegramBotClient telegram, CancellationToken ct = default)
+        {
+            var (contacto, mensaje) = await GuardarSalienteAsync(chatId, texto, ct);
+
+            var envio = await telegram.EnviarMensajeAsync(chatId, texto, ct);
+
+            // Se actualiza la fila ya guardada con el resultado de la entrega.
+            var fila = await _db.Mensajes.FirstAsync(m => m.Id == mensaje.Id, ct);
+            fila.Entregado = envio.Ok;
+            fila.ErrorEntrega = envio.Error;
+            fila.TelegramMessageId = envio.MessageId;
+            await _db.SaveChangesAsync(ct);
+
+            return (contacto, AMensajeDto(fila));
+        }
+
+        /// <summary>
         /// Marca la conversación como leída (no leídos en 0 y mensajes entrantes en leído).
         /// Devuelve el contacto actualizado, o null si no existe.
         /// </summary>
@@ -209,7 +235,8 @@ namespace EncodeAssistant.EncodeApi.Aplication.Services
             c.Id, c.Nombre, c.Username, c.UltimoTexto, EnUtc(c.UltimaFecha), c.NoLeidos, c.Activo);
 
         private static MessageDto AMensajeDto(Mensaje m) => new(
-            m.Id, m.ContactoId, m.Texto, m.Direccion, EnUtc(m.FechaCreacion), m.Leido);
+            m.Id, m.ContactoId, m.Texto, m.Direccion, EnUtc(m.FechaCreacion), m.Leido,
+            m.Entregado, m.ErrorEntrega);
 
         /// <summary>
         /// SQL Server devuelve DateTime sin Kind; se fuerza UTC para que el JSON

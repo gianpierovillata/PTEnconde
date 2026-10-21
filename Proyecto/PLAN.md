@@ -142,9 +142,13 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] CORS restringido con `CORS_ALLOWED_ORIGINS` y credenciales habilitadas para el negotiate.
 
 ### Fase 5 — Integración Telegram
-- [ ] Cliente de la Bot API para enviar respuestas (hoy la respuesta se persiste y se emite por SignalR, pero **no** viaja a Telegram).
-- [ ] Endpoint de webhook con validación del secret (`X-Telegram-Bot-Api-Secret-Token`).
-- [ ] Registro automático del webhook contra la URL pública al arrancar (reintento si ngrok aún no está listo).
+- [x] Cliente de la Bot API para enviar respuestas (`Aplication/Services/TelegramBotClient.cs`): `sendMessage` con token de `TELEGRAM_BOT_TOKEN`, timeout de 15s y **sin lanzar excepción** ante errores de Telegram (devuelve `TelegramEnvioResultado`).
+- [x] El endpoint `POST /api/v1/contacts/{chatId}/messages` envía la respuesta del operador al usuario real y guarda el estado de entrega en `Mensaje` (`Entregado`, `ErrorEntrega`, `TelegramMessageId`). Si Telegram rechaza el envío, el mensaje se persiste igual con `delivered: false` y la respuesta trae `advertencia` (sigue siendo `201` para no perder el registro).
+- [x] El compose le pasa `TELEGRAM_BOT_TOKEN` y `TELEGRAM_API_BASE_URL` a la API (antes no los recibía).
+- [x] Verificado E2E contra Telegram real: respuesta del operador recibida por el usuario (`delivered: true`, `telegramMessageId` 20/21) y camino de fallo con chat inexistente (`delivered: false`, `"Bad Request: chat not found"`, persistido).
+- [ ] Endpoint de webhook con validación del secret (`X-Telegram-Bot-Api-Secret-Token`) — hoy el secret está declarado pero **no se valida**.
+- [ ] Registro automático del webhook contra la URL pública al arrancar (reintento si ngrok aún no está listo) — hoy es manual con `setWebhook`.
+- [ ] UI: mostrar en la bandeja los mensajes con `delivered: false` (el campo ya llega en el DTO; solo falta la indicación visual).
 
 ### Fase 6 — Frontend Angular (22)
 - [x] Scaffold con `ng new` (standalone + SSR) en `EncodeAssistant/encondechatapp/`.
