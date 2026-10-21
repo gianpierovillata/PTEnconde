@@ -1,4 +1,4 @@
-### AGENTS.md
+# AGENTS.md
 
 Guía para las sesiones de OpenCode en este repositorio. Todo se escribe en **español**: `README.md`, ADRs, diagramas y comentarios de documentación.
 
