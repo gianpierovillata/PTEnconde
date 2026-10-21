@@ -1,6 +1,37 @@
-# AGENTS.md
+### AGENTS.md
 
 Guía para las sesiones de OpenCode en este repositorio. Todo se escribe en **español**: `README.md`, ADRs, diagramas y comentarios de documentación.
+
+## Objetivo principal
+
+Construir una bandeja web donde un operador recibe, visualiza y responde en tiempo real los mensajes de texto que los usuarios envían a un bot de Telegram.
+
+## Stack tecnológico
+
+| Área | Producto | Tecnología |
+|---|---|---|
+| Backend | Api Minimal - WebHook | .NET 10 |
+| Frontend | App de mensajería para operadores centralizada | Angular última versión estable |
+| Base de datos | Base de datos para mantener persistencia | SQL Server |
+| Mensajería | Mensajería, colas de mensajes | RabbitMQ para el procesamiento de los mensajes entrantes |
+| Tiempo real | Comunicación en tiempo real entre backend y frontend | SignalR (.NET) |
+| Telegram | Bot propio (creado con BotFather) y webhook registrado en Telegram usando la URL pública de ngrok | Telegram BotFather |
+| Exposición pública | ngrok para exponer el webhook y la app | ngrok |
+| Ejecución | La solución levanta con `docker compose up` | Docker Compose |
+
+---
+
+## 1. Requisitos previos
+
+| Requisito | Detalle |
+|---|---|
+| Docker Desktop (o Docker Engine + Compose v2) | Único requisito obligatorio para levantar toda la solución. Verificar con `docker compose version`. |
+| Cuenta de Telegram + bot | Crear un bot con [@BotFather](https://t.me/BotFather): `/newbot` → te entrega el **token** (formato `123456:AA...`). |
+| Dos cuentas de ngrok | Se usan **dos túneles con URL estática**, uno por servicio, cada uno con su propia cuenta: [dashboard.ngrok.com](https://dashboard.ngrok.com) → *Your Authtoken* y *Static Domains*. |
+| (Opcional) SDK .NET 10 y Node.js 22+ | Solo si querés correr la API o el frontend fuera de Docker en desarrollo local. |
+
+> ⚠️ Solo puede haber **un agente de ngrok por dominio**: si tenés un ngrok local corriendo con el mismo dominio que el contenedor, este falla con `ERR_NGROK_334`.
+
 
 ## Qué es este repositorio
 
@@ -13,9 +44,7 @@ Prueba técnica para **encodelabs**: una bandeja web ("bandeja conversacional") 
 - `Proyecto/AnalisisC4/` — carpeta prevista para los diagramas C4.
 - `Proyecto/Prompts.md` — prompts originales del usuario, no es fuente de requisitos.
 
-**No** existen todavía ADRs, tests ni CI. No asumir que existan. Sí existen el `.gitignore` raíz, `.env.example`, los Dockerfiles y `docker-compose.yml` (servicios `sqlserver`, `api`, `frontend`, `ngrok-api` y `ngrok-app`).
 
-La bandeja ya es funcional de punta a punta: webhook → SQL Server → SignalR → Angular, y las respuestas del operador viajan al usuario por la Bot API de Telegram. Lo que falta está en `Proyecto/PLAN.md` (RabbitMQ, separación en capas, registro automático del webhook, entregables).
 
 ## Estructura de `encode-api`
 
@@ -30,9 +59,8 @@ Persistence/EncodeDbContext.cs    tablas, índices y borrado en cascada
 Hubs/InboxHub.cs                  hub de SignalR (/hubs/inbox)
 ```
 
-> Ojo con el nombre: la carpeta se llama **`Aplication`** (una sola `c`) y así está el namespace. No "corregirlo" sin renombrar namespaces y `using` en todos lados (está previsto en la Fase 1).
 
-## Comandos
+## Comandos para ejecutar el proyecto
 
 ```bash
 dotnet build EncodeAssistant/encode-api/encode-api.csproj
@@ -96,12 +124,7 @@ docker compose --env-file .env.example config   # validar sin tocar el .env loca
 - El contenedor de SQL Server **no** trae `sqlcmd`. Para consultar, usar `mcr.microsoft.com/mssql-tools` con `--network enconde-inbox_backend`.
 - `RabbitMQ` todavía no está en el compose (ver Fase 7 de `Proyecto/PLAN.md`).
 
-## Frontend: detalles que se pisan fácil
 
-- **Hidratación:** la app usa SSR con `RenderMode.Prerender` para todas las rutas. `Inbox` carga en `afterNextRender`, **no** en `ngOnInit` (con un guard de `isPlatformBrowser`, el navegador se quedaba con el HTML prerenderizado y el sidebar vacío). `AppConfigService.cargar()` también espera a `afterNextRender`.
-- **Config en runtime:** `/assets/config.json` lo genera `docker-entrypoint.sh` al arrancar el contenedor desde `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL`. En desarrollo se usa `public/assets/config.json` (valores locales).
-- **Al tocar el frontend hay que rehacer el build** (`npm run build`) y recrear el contenedor (`docker compose up -d --build frontend`); nginx sirve el bundle ya compilado. Después, hard refresh en el navegador (el nombre del bundle cambia).
-- **Verificación sin navegador a mano:** hay Chrome headless disponible. `google-chrome --headless=new --dump-dom` sirve para ver el DOM renderizado, y `--enable-logging=stderr --v=0` para leer la consola real (ahí se ven los errores de hidratación y de red).
 
 ## Restricciones de arquitectura (de la spec)
 
@@ -109,12 +132,14 @@ docker compose --env-file .env.example config   # validar sin tocar el .env loca
 - Stack esperado: RabbitMQ (mensajes entrantes), SignalR (tiempo real), SQL Server (persistencia), ngrok (URL pública del webhook), frontend Angular.
 - Todo debe levantarse con un único `docker compose up` después de que el operador complete el `.env`.
 
-## Entregables que faltan crear
+## Entregables 
 
-Diagramas C4 (Nivel 1 + 2) en `Proyecto/AnalisisC4/`, ADR-001..003 (base de datos, tecnología de tiempo real, flujo del webhook + topología de RabbitMQ) y el documento de una página "Trabajo con IA". El `README.md` raíz ya tiene las secciones que pide la spec.
+Diagramas C4 (Nivel 1 + 2) en `Proyecto/AnalisisC4/`
+El documento de una página "Trabajo con IA". 
+El `README.md` raíz ya tiene las secciones que pide la spec.
 
 ## Puntos de atención
 
-- El `.env` de la raíz tiene credenciales locales de desarrollo y está ignorado por git: **nunca** forzarlo al repo (`git add -f`). Solo se versiona `.env.example`.
+- El `.env` de la raíz tiene credenciales locales de desarrollo y está ignorado por git: **nunca** forzarlo al repo (`git add -f`). 
+Solo se versiona `.env.example`.
 - `.env.example` usa dominios de ngrok y contraseñas **falsos** a propósito; mantenerlo así.
-- Git está inicializado en `main` con 6 commits (`085b43b` … `2c5872c`) e `origin` configurado. Buena parte del trabajo de la bandeja está **sin commitear**.
