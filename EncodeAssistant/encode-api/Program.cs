@@ -52,7 +52,7 @@ builder.Services.AddScoped<BandejaService>();
 
 var app = builder.Build();
 
-// --- Esquema de la base (EnsureCreated: crea EncodeInbox si no existe) --------
+// --- Esquema de la base (EnsureCreated: crea la base del ConnectionString) ----
 // Reintenta ante el arranque en frío de SQL Server dentro del compose.
 using (var scope = app.Services.CreateScope())
 {
@@ -105,6 +105,37 @@ app.MapGet("/api/v1/contacts", async (BandejaService bandeja, CancellationToken 
 {
     var contactos = await bandeja.ListarContactosAsync(ct);
     return Results.Ok(contactos);
+});
+
+// Vacía la bandeja completa: borra todos los contactos y sus mensajes.
+// El frontend emite "ConversacionEliminada" (con chatId vacío) para que las otras
+// pestañas limpien la vista.
+app.MapDelete("/api/v1/contacts", async (
+    BandejaService bandeja,
+    IHubContext<InboxHub> hub,
+    CancellationToken ct) =>
+{
+    var eliminadas = await bandeja.EliminarTodasLasConversacionesAsync(ct);
+
+    await hub.Clients.All.SendAsync("ConversacionEliminada", string.Empty, ct);
+    return Results.Ok(new { eliminadas });
+});
+
+// Elimina una conversación completa (contacto + mensajes).
+app.MapDelete("/api/v1/contacts/{chatId}", async (
+    string chatId,
+    BandejaService bandeja,
+    IHubContext<InboxHub> hub,
+    CancellationToken ct) =>
+{
+    var eliminado = await bandeja.EliminarConversacionAsync(chatId, ct);
+    if (!eliminado)
+    {
+        return Results.NotFound(new { error = $"No existe el contacto '{chatId}'." });
+    }
+
+    await hub.Clients.All.SendAsync("ConversacionEliminada", chatId, ct);
+    return Results.NoContent();
 });
 
 // Historial de una conversación, en orden cronológico.

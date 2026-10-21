@@ -170,6 +170,41 @@ namespace EncodeAssistant.EncodeApi.Aplication.Services
             return AContactoDto(contacto);
         }
 
+        /// <summary>
+        /// Elimina una conversación completa (el contacto y todos sus mensajes).
+        /// Devuelve false si el contacto no existe.
+        /// </summary>
+        public async Task<bool> EliminarConversacionAsync(string contactoId, CancellationToken ct = default)
+        {
+            var contacto = await _db.Contactos.FirstOrDefaultAsync(c => c.Id == contactoId, ct);
+            if (contacto is null)
+            {
+                return false;
+            }
+
+            // Los mensajes se borran en cascada por la FK configurada en el DbContext.
+            _db.Contactos.Remove(contacto);
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+
+        /// <summary>
+        /// Vacía la bandeja: elimina todos los contactos y sus mensajes.
+        /// Devuelve cuántas conversaciones se borraron.
+        /// </summary>
+        public async Task<int> EliminarTodasLasConversacionesAsync(CancellationToken ct = default)
+        {
+            var contactos = await _db.Contactos.ToListAsync(ct);
+            if (contactos.Count == 0)
+            {
+                return 0;
+            }
+
+            _db.Contactos.RemoveRange(contactos);
+            await _db.SaveChangesAsync(ct);
+            return contactos.Count;
+        }
+
         private static ContactDto AContactoDto(Contacto c) => new(
             c.Id, c.Nombre, c.Username, c.UltimoTexto, EnUtc(c.UltimaFecha), c.NoLeidos, c.Activo);
 

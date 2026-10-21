@@ -14,4 +14,22 @@
     </div>
     <span class="chat-header-subtitle">{{ subtitulo() }}</span>
   </div>
+
+  @if (contacto()) {
+    <button
+      type="button"
+      class="chat-header-eliminar"
+      title="Eliminar conversación"
+      aria-label="Eliminar conversación"
+      (click)="eliminar.emit()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm3 2v8h2v-8H9Zm4 0v8h2v-8h-2Z"
+          fill="currentColor"
+        />
+      </svg>
+      <span class="chat-header-eliminar-texto">Eliminar</span>
+    </button>
+  }
 </header>

@@ -18,6 +18,7 @@ export class RealtimeService {
 
   private readonly nuevosMensajes$ = new Subject<Message>();
   private readonly contactos$ = new Subject<Contact>();
+  private readonly conversacionesEliminadas$ = new Subject<string>();
 
   private conexion: signalR.HubConnection | null = null;
 
@@ -26,6 +27,12 @@ export class RealtimeService {
 
   /** Emite el contacto cuando cambia su último mensaje o sus no leídos. */
   readonly contactoActualizado$ = this.contactos$.asObservable();
+
+  /**
+   * Emite el chatId de la conversación borrada, o cadena vacía cuando se
+   * vació la bandeja completa (DELETE /api/v1/contacts).
+   */
+  readonly conversacionEliminada$ = this.conversacionesEliminadas$.asObservable();
 
   /** Arranca la conexión (idempotente). Se llama al entrar a la bandeja. */
   async conectar(): Promise<void> {
@@ -53,6 +60,10 @@ export class RealtimeService {
 
     hub.on('ContactoActualizado', (contacto: Contact) => {
       this.zone.run(() => this.contactos$.next(contacto));
+    });
+
+    hub.on('ConversacionEliminada', (chatId: string) => {
+      this.zone.run(() => this.conversacionesEliminadas$.next(chatId ?? ''));
     });
 
     hub.onreconnected(() => console.info('[Realtime] Reconectado al hub de la bandeja.'));

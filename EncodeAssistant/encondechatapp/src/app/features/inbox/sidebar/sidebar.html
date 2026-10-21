@@ -1,8 +1,21 @@
 <aside class="sidebar">
   <header class="sidebar-header">
-    <h2 class="sidebar-title">Conversaciones</h2>
+    <div class="sidebar-header-titulo">
+      <h2 class="sidebar-title">Conversaciones</h2>
+      @if (contactos().length > 0) {
+        <span class="sidebar-count">{{ contactos().length }}</span>
+      }
+    </div>
+
     @if (contactos().length > 0) {
-      <span class="sidebar-count">{{ contactos().length }}</span>
+      <button
+        type="button"
+        class="sidebar-vaciar"
+        title="Eliminar todas las conversaciones"
+        (click)="eliminarTodo.emit()"
+      >
+        Vaciar
+      </button>
     }
   </header>
 
@@ -14,36 +27,48 @@
     }
 
     @for (contacto of contactos(); track contacto.id) {
-      <button
-        type="button"
-        class="contact-card"
-        [class.contact-card--activo]="estaSeleccionado(contacto)"
-        (click)="seleccionar.emit(contacto)"
-      >
-        <span class="contact-avatar">
-          <svg class="contact-avatar-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <div class="contact-card" [class.contact-card--activo]="estaSeleccionado(contacto)">
+        <button type="button" class="contact-card-cuerpo" (click)="seleccionar.emit(contacto)">
+          <span class="contact-avatar">
+            <svg class="contact-avatar-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+
+          <span class="contact-info">
+            <span class="contact-row">
+              <span class="contact-name">{{ nombreVisible(contacto) }}</span>
+              @if (horaUltimoMensaje(contacto); as fecha) {
+                <span class="contact-time">{{ fecha | date: 'HH:mm' }}</span>
+              }
+            </span>
+            <span class="contact-row">
+              <span class="contact-preview">{{ contacto.lastMessage || 'Sin mensajes' }}</span>
+              @if (contacto.unreadCount > 0) {
+                <span class="contact-badge">{{ contacto.unreadCount }}</span>
+              }
+            </span>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="contact-eliminar"
+          title="Eliminar conversación"
+          aria-label="Eliminar conversación"
+          (click)="eliminar.emit(contacto)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
             <path
-              d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
+              d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm3 2v8h2v-8H9Zm4 0v8h2v-8h-2Z"
               fill="currentColor"
             />
           </svg>
-        </span>
-
-        <span class="contact-info">
-          <span class="contact-row">
-            <span class="contact-name">{{ nombreVisible(contacto) }}</span>
-            @if (horaUltimoMensaje(contacto); as fecha) {
-              <span class="contact-time">{{ fecha | date: 'HH:mm' }}</span>
-            }
-          </span>
-          <span class="contact-row">
-            <span class="contact-preview">{{ contacto.lastMessage || 'Sin mensajes' }}</span>
-            @if (contacto.unreadCount > 0) {
-              <span class="contact-badge">{{ contacto.unreadCount }}</span>
-            }
-          </span>
-        </span>
-      </button>
+        </button>
+      </div>
     }
   </nav>
 </aside>

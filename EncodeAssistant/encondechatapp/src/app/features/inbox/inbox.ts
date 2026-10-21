@@ -3,6 +3,7 @@ import { PLATFORM_ID } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
 import { Sidebar } from './sidebar/sidebar';
 import { Chat } from './chat/chat';
+import { ConfirmDialog } from '../../shared/confirm-dialog/confirm-dialog';
 import { Contact } from '../../core/models/contact.model';
 import { Message } from '../../core/models/message.model';
 import { ContactService } from '../../core/services/contact.service';
@@ -14,7 +15,7 @@ import { RealtimeService } from '../../core/services/realtime.service';
  * mensajes) y lo sincroniza en tiempo real con la API por SignalR.
  */
 @Component({
-  imports: [Sidebar, Chat],
+  imports: [Sidebar, Chat, ConfirmDialog],
   selector: 'app-inbox',
   styleUrl: './inbox.css',
   templateUrl: './inbox.html',
@@ -36,6 +37,42 @@ export class Inbox implements OnDestroy {
 
   readonly cargandoContactos = signal(false);
   readonly cargandoMensajes = signal(false);
+
+  /** Conversación esperando confirmación de borrado (null = no hay diálogo abierto). */
+  readonly pendienteDeEliminar = signal<Contact | null>(null);
+
+  /** true si el diálogo abierto es el de "vaciar la bandeja completa". */
+  readonly vaciadoPendiente = signal(false);
+
+  /** Hay un borrado esperando confirmación. */
+  readonly confirmacionAbierta = computed(() => this.pendienteDeEliminar() !== null || this.vaciadoPendiente());
+
+  /** Título del diálogo según la acción pendiente. */
+  readonly tituloConfirmacion = computed(() =>
+    this.vaciadoPendiente() ? '¿Vaciar la bandeja?' : '¿Eliminar la conversación?',
+  );
+
+  /** Texto que explica el alcance del borrado. */
+  readonly mensajeConfirmacion = computed(() =>
+    this.vaciadoPendiente()
+      ? `Se eliminan las ${this.contactos().length} conversaciones y todo su historial. Esta acción no se puede deshacer.`
+      : 'Se elimina el contacto y todo su historial. Esta acción no se puede deshacer.',
+  );
+
+  /** Nombre visible de la conversación que se va a borrar (vacío al vaciar la bandeja). */
+  readonly detalleConfirmacion = computed(() => {
+    const contacto = this.pendienteDeEliminar();
+    if (!contacto) {
+      return '';
+    }
+
+    return contacto.name?.trim() || (contacto.username ? `@${contacto.username}` : `Chat ${contacto.id}`);
+  });
+
+  /** El botón de confirmar cambia de texto según la acción. */
+  readonly textoConfirmacion = computed(() =>
+    this.vaciadoPendiente() ? `Vaciar (${this.contactos().length})` : 'Eliminar',
+  );
 
   /** true mientras hay una conversación abierta (habilita el input de respuesta). */
   readonly puedeResponder = computed(() => this.contactoSeleccionado() !== null);
@@ -106,6 +143,81 @@ export class Inbox implements OnDestroy {
       });
   }
 
+  /** Pide confirmación antes de eliminar una conversación (contacto + mensajes). */
+  eliminarConversacion(contacto: Contact): void {
+    this.pendienteDeEliminar.set(contacto);
+  }
+
+  /** Elimina la conversación abierta (botón de la cabecera del chat). */
+  eliminarConversacionSeleccionada(): void {
+    const contacto = this.contactoSeleccionado();
+    if (contacto) {
+      this.eliminarConversacion(contacto);
+    }
+  }
+
+  /** Pide confirmación antes de vaciar la bandeja completa. */
+  eliminarTodasLasConversaciones(): void {
+    this.vaciadoPendiente.set(true);
+  }
+
+  /** Cierra el diálogo sin borrar nada. */
+  cancelarEliminacion(): void {
+    this.pendienteDeEliminar.set(null);
+    this.vaciadoPendiente.set(false);
+  }
+
+  /** El operador confirmó: ejecuta el borrado que estaba pendiente. */
+  confirmarEliminacion(): void {
+    const contacto = this.pendienteDeEliminar();
+    this.cancelarEliminacion();
+
+    if (contacto) {
+      this.borrarConversacion(contacto);
+    } else {
+      this.borrarTodo();
+    }
+  }
+
+  private borrarConversacion(contacto: Contact): void {
+    this.contactosService
+      .deleteContact(contacto.id)
+      .pipe(takeUntil(this.destruido$))
+      .subscribe({
+        // El evento de SignalR también llega, pero se limpia acá para que la UI
+        // reaccione al instante aunque la conexión esté caída.
+        next: () => this.quitarContacto(contacto.id),
+        error: (error) => console.error('[Bandeja] No se pudo eliminar la conversación:', error),
+      });
+  }
+
+  private borrarTodo(): void {
+    this.contactosService
+      .deleteAllContacts()
+      .pipe(takeUntil(this.destruido$))
+      .subscribe({
+        next: () => this.limpiarBandeja(),
+        error: (error) => console.error('[Bandeja] No se pudo vaciar la bandeja:', error),
+      });
+  }
+
+  /** Quita un contacto de la lista y cierra la conversación si era la abierta. */
+  private quitarContacto(contactoId: string | number): void {
+    this.contactos.update((actuales) => actuales.filter((c) => String(c.id) !== String(contactoId)));
+
+    if (String(this.contactoSeleccionado()?.id) === String(contactoId)) {
+      this.contactoSeleccionado.set(null);
+      this.mensajes.set([]);
+    }
+  }
+
+  /** Deja la bandeja vacía (usado al eliminar todas las conversaciones). */
+  private limpiarBandeja(): void {
+    this.contactos.set([]);
+    this.contactoSeleccionado.set(null);
+    this.mensajes.set([]);
+  }
+
   private cargarContactos(): void {
     this.cargandoContactos.set(true);
 
@@ -146,6 +258,11 @@ export class Inbox implements OnDestroy {
     this.realtime.contactoActualizado$
       .pipe(takeUntil(this.destruido$))
       .subscribe((contacto) => this.actualizarContacto(contacto));
+
+    // Conversación borrada en otra pestaña (chatId vacío = se vació toda la bandeja).
+    this.realtime.conversacionEliminada$
+      .pipe(takeUntil(this.destruido$))
+      .subscribe((chatId) => (chatId ? this.quitarContacto(chatId) : this.limpiarBandeja()));
   }
 
   /** Agrega un mensaje al final, sin duplicar los que ya llegaron por SignalR. */

@@ -19,4 +19,7 @@ export class Chat {
   readonly puedeResponder = input(false);
 
   readonly enviar = output<string>();
+
+  /** Emite cuando el operador pide eliminar la conversación abierta. */
+  readonly eliminar = output<void>();
 }

@@ -4,6 +4,8 @@
     [seleccionadoId]="contactoSeleccionado()?.id ?? null"
     [cargando]="cargandoContactos()"
     (seleccionar)="seleccionarContacto($event)"
+    (eliminar)="eliminarConversacion($event)"
+    (eliminarTodo)="eliminarTodasLasConversaciones()"
   ></app-sidebar>
 
   <app-chat
@@ -12,5 +14,16 @@
     [cargando]="cargandoMensajes()"
     [puedeResponder]="puedeResponder()"
     (enviar)="enviarMensaje($event)"
+    (eliminar)="eliminarConversacionSeleccionada()"
   ></app-chat>
+
+  <app-confirm-dialog
+    [abierto]="confirmacionAbierta()"
+    [titulo]="tituloConfirmacion()"
+    [mensaje]="mensajeConfirmacion()"
+    [detalle]="detalleConfirmacion()"
+    [textoConfirmar]="textoConfirmacion()"
+    (confirmar)="confirmarEliminacion()"
+    (cancelar)="cancelarEliminacion()"
+  ></app-confirm-dialog>
 </div>

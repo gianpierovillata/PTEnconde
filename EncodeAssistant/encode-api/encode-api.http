@@ -52,3 +52,20 @@ Content-Type: application/json
 POST {{encode_api_HostAddress}}/api/v1/contacts/123456789/read
 
 ###
+
+### Eliminar una conversación completa (contacto + sus mensajes)
+### Emite "ConversacionEliminada" por SignalR con el chatId.
+DELETE {{encode_api_HostAddress}}/api/v1/contacts/123456789
+
+###
+
+### Vaciar la bandeja: borra todos los contactos y sus mensajes.
+### Emite "ConversacionEliminada" por SignalR con chatId vacío.
+DELETE {{encode_api_HostAddress}}/api/v1/contacts
+
+###
+
+### Eliminar un mensaje suelto y recalcular la vista previa del contacto
+DELETE {{encode_api_HostAddress}}/api/v1/messages/1
+
+###

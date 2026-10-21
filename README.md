@@ -61,8 +61,11 @@ El `.env` **nunca se commitea** (lo ignora `.gitignore`); solo se versiona `.env
 | `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL` | URLs que el navegador usará para llegar a la API y a SignalR (HTTPS público para evitar *mixed content*). El contenedor del frontend genera `/assets/config.json` con estos valores al arrancar y la app los lee en runtime. |
 | `RABBITMQ_*` | Ya vienen con valores de referencia; se usan cuando RabbitMQ entre al compose (Fase 3). |
 
-## 3. Cómo levantar la solución
+> ⚠️ **Aviso de ngrok en el plan free (`ERR_NGROK_6024`).** ngrok intercepta las peticiones que vienen de un **navegador** y devuelve su página de advertencia ("You are about to visit…") en lugar de la respuesta de la API. Como `FRONTEND_API_BASE_URL` apunta al túnel, la bandeja vería esa página HTML en vez del JSON y el sidebar quedaría vacío (el error del navegador parece un problema de CORS, pero no lo es: `curl` funciona porque no lo intercepta). La app lo resuelve sola enviando el header `ngrok-skip-browser-warning` en todas las llamadas HTTP (`ngrokInterceptor`) y en el *negotiate* de SignalR; no hay que hacer nada.
+>
+> Si preferís no depender del túnel para el navegador: poné `FRONTEND_API_BASE_URL=http://localhost:5088` y `FRONTEND_SIGNALR_URL=http://localhost:5088/hubs/inbox` en el `.env`, reiniciá `frontend` (`docker compose up -d frontend`) y dejá el túnel solo para el webhook de Telegram.
 
+## 3. Cómo levantar la solución
 ```bash
 docker compose up --build      # levanta todo (usa el .env local)
 docker compose ps              # estado de los servicios
@@ -99,6 +102,22 @@ URLs resultantes (reemplazá los dominios por los tuyos):
 > Para el frontend en dev: `cd EncodeAssistant/encondechatapp && npm start` (lee `public/assets/config.json`).
 
 ## 4. Cómo probarla de punta a punta
+
+Referencia rápida de la API (Swagger en `http://localhost:5088/swagger`):
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/v1/health` | Healthcheck. |
+| `POST` | `/api/telegram/webhook` | Recibe el `Update` de Telegram, persiste el mensaje y lo emite por SignalR. `/start` se descarta (ver Paso 3). |
+| `GET` | `/api/v1/contacts` | Contactos del sidebar, ordenados por último mensaje. |
+| `GET` | `/api/v1/contacts/{chatId}/messages` | Historial de la conversación, en orden cronológico. |
+| `POST` | `/api/v1/contacts/{chatId}/messages` | Respuesta del operador: se persiste y se emite por SignalR. |
+| `POST` | `/api/v1/contacts/{chatId}/read` | Marca la conversación como leída (no leídos en 0). |
+| `DELETE` | `/api/v1/contacts/{chatId}` | Elimina una conversación completa (contacto + mensajes). |
+| `DELETE` | `/api/v1/contacts` | Vacía la bandeja. Devuelve `{"eliminadas": n}`. |
+| `DELETE` | `/api/v1/messages/{id}` | Elimina un mensaje suelto y recalcula la vista previa del contacto. |
+
+Eventos que emite el hub SignalR (`/hubs/inbox`): `NuevoMensaje`, `ContactoActualizado` y `ConversacionEliminada` (con el `chatId`, o vacío al vaciar la bandeja).
 
 **Paso 1 — Salud del servicio (local y público)**
 
@@ -140,7 +159,7 @@ docker compose logs -f api | grep "Mensaje entrante"
 
 También podés hacerlo desde `EncodeAssistant/encode-api/encode-api.http` (VS Code / Rider / Swagger).
 
-Para probar la rama del comando de inicio, cambiá `"text": "hola"` por `"text": "/start"`.
+> **Sobre `/start`:** es el comando con el que el usuario conecta el bot, no un mensaje de la conversación. La API lo registra en el log, pero **no** lo persiste, **no** lo emite por SignalR y **no** crea el contacto: por eso no aparece en la bandeja. El contacto se crea cuando llega el primer mensaje real. Si probás con `"text": "/start"` vas a ver el log y ningún cambio en `GET /api/v1/contacts`.
 
 El mensaje queda **persistido en SQL Server** y se emite por SignalR:
 
@@ -212,10 +231,34 @@ El historial completo queda en la base; al reabrir la conversación se ve igual:
 
 ```bash
 curl http://localhost:5088/api/v1/contacts/123456789/messages
-curl http://localhost:5088/api/v1/contacts/123456789/read   # abre y marca leídos (POST)
+curl -X POST http://localhost:5088/api/v1/contacts/123456789/read   # abre y marca leídos
 ```
 
 > El **envío real a Telegram** de esa respuesta se implementa en la Fase 5 del `PLAN.md`: hoy se persiste y se emite por SignalR, pero todavía no viaja al usuario por la Bot API.
+
+**Paso 6 bis — Borrar conversaciones (también desde la UI)**
+
+Desde el código:
+
+```bash
+# Elimina una conversación completa (contacto + mensajes)
+curl -X DELETE http://localhost:5088/api/v1/contacts/123456789
+# → 204 No Content (404 si el contacto no existe)
+
+# Vacía la bandeja entera
+curl -X DELETE http://localhost:5088/api/v1/contacts
+# → {"eliminadas":4}
+```
+
+Desde la app:
+
+- **Vaciar** (cabecera del sidebar) borra todas las conversaciones.
+- El **ícono de papelera** de cada tarjeta borra esa conversación.
+- **Eliminar** (cabecera del chat) borra la conversación abierta.
+
+Las tres acciones piden **confirmación** en un diálogo modal (que además se cierra con Escape o con **Cancelar**); recién al confirmar se llama a la API. Las tres emiten `ConversacionEliminada` por SignalR, así que las demás pestañas abiertas se actualizan solas.
+
+> Limpiar la bandeja **no** borra el historial del lado de Telegram ni desregistra el webhook: las conversaciones vuelven a aparecer cuando el usuario le escribe de nuevo al bot. Para empezar de cero también la base, `docker compose down -v` recrea el volumen de SQL Server.
 
 **Paso 7 — Abrir la bandeja**
 
@@ -224,6 +267,7 @@ curl http://localhost:5088/api/v1/contacts/123456789/read   # abre y marca leíd
 - Al hacer clic en un contacto se carga el historial y se marcan los mensajes como leídos.
 - Con la conversación abierta, mandá otro mensaje al bot (Paso 3 o 5): aparece al instante y el sidebar se reordena.
 - Escribí en la caja de abajo y presioná Enter: la respuesta se guarda y se muestra como burbuja propia.
+- Para borrar: **Vaciar** en la cabecera del sidebar (todas las conversaciones), el ícono de papelera de una tarjeta (esa conversación) o **Eliminar** en la cabecera del chat (la abierta). Las tres piden confirmación antes de borrar.
 
 ## 5. Supuestos
 
@@ -231,7 +275,9 @@ Decisiones tomadas ante lo que la spec no define:
 
 1. **Angular 22 (no LTS):** la spec pide la "última versión estable"; se usa 22 en lugar de 21 LTS.
 2. **Dos cuentas de ngrok:** se exige un túnel para el webhook y otro para la app; ngrok permite un solo agente por dominio, y gratis ofrece un dominio estático por cuenta → dos cuentas = dos authtokens (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`).
-3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram, lo persiste en SQL Server (EF Core) y lo emite por SignalR a la bandeja Angular, que ya lista contactos, muestra el historial, marca leídos y permite responder. Falta: RabbitMQ entre el webhook y la persistencia (Fase 3) y el envío real de las respuestas por la Bot API (Fase 5). SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
+3. **Estado actual del flujo:** el webhook recibe el `Update` real de Telegram, lo persiste en SQL Server (EF Core) y lo emite por SignalR a la bandeja Angular, que lista contactos, muestra el historial, marca leídos, permite responder y borrar conversaciones (individual o toda la bandeja, con confirmación). Falta: RabbitMQ entre el webhook y la persistencia (Fase 3) y el envío real de las respuestas por la Bot API (Fase 5). SQL Server ya corre en el compose; las variables de RabbitMQ están declaradas en `.env`, pero **el servicio RabbitMQ todavía no está en el compose**.
 4. **Registro manual del webhook:** hasta la Fase 5 no hay auto-registro al arrancar; mientras tanto se registra con `setWebhook` (ver §4, paso 5).
 5. **Fuera de alcance** (según spec): autenticación/usuarios, mensajes no textuales, diseño responsive y paginación del historial.
 6. **Puertos por defecto:** API `5088`, frontend `4200`, SQL Server `1433` (solo para desarrollo local; en producción no se publican).
+7. **Esquema sin migraciones:** la base se crea con `EnsureCreated()` al arrancar (no hay migraciones de EF Core todavía). Es suficiente para la prueba, pero un cambio de modelo no se aplica sobre una base existente: hay que recrear el volumen (`docker compose down -v`). Las migraciones entran junto con la separación en capas (Fase 1).
+8. **`/start` no se muestra:** es el comando de conexión del bot, no un mensaje del usuario. Se registra en el log y se descarta; el contacto se crea con el primer mensaje real (ver §4, paso 3).

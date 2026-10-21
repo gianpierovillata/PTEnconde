@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { Contact } from '../../../../core/models/contact.model';
 
 /** Cabecera de la conversación: usuario de Telegram con el que se está hablando. */
@@ -10,6 +10,9 @@ import { Contact } from '../../../../core/models/contact.model';
 })
 export class ChatHeader {
   readonly contacto = input<Contact | null>(null);
+
+  /** Emite cuando el operador pide eliminar la conversación abierta. */
+  readonly eliminar = output<void>();
 
   nombreVisible(): string {
     const contacto = this.contacto();

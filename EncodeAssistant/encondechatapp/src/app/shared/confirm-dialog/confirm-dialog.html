@@ -1,0 +1,18 @@
+<dialog #dialogo class="dialogo" (close)="alCerrar()">
+  <h2 class="dialogo-titulo">{{ titulo() }}</h2>
+
+  <p class="dialogo-mensaje">{{ mensaje() }}</p>
+
+  @if (detalle()) {
+    <p class="dialogo-detalle">{{ detalle() }}</p>
+  }
+
+  <div class="dialogo-acciones">
+    <button #botonCancelar type="button" class="dialogo-boton dialogo-boton--cancelar" (click)="cancelar.emit()">
+      Cancelar
+    </button>
+    <button type="button" class="dialogo-boton dialogo-boton--confirmar" (click)="confirmar.emit()">
+      {{ textoConfirmar() }}
+    </button>
+  </div>
+</dialog>

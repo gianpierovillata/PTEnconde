@@ -25,4 +25,14 @@ export class ContactService {
   markAsRead(id: string | number): Observable<Contact> {
     return this.http.post<Contact>(`${this.baseUrl}/${id}/read`, {});
   }
+
+  /** Elimina una conversación completa (contacto + mensajes). */
+  deleteContact(id: string | number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /** Vacía la bandeja: borra todas las conversaciones y sus mensajes. */
+  deleteAllContacts(): Observable<{ eliminadas: number }> {
+    return this.http.delete<{ eliminadas: number }>(this.baseUrl);
+  }
 }

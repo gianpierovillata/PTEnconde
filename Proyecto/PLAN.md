@@ -60,23 +60,25 @@ Definidas en `.env.example` (raíz del repo) agrupadas por servicio:
 
 `.env` **no** se commitea (lo ignora `.gitignore`). Solo se versiona `.env.example` con estos nombres y valores falsos.
 
-## Entorno verificado (19/10/2026)
+## Entorno verificado (actualizado 20/10/2026)
 
 | Herramienta | Estado | Versión / nota |
 |---|---|---|
 | .NET SDK | ✅ instalado | 10.0.402 — `dotnet build/run --project EncodeAssistant/encode-api/encode-api.csproj` |
 | Node.js | ✅ instalado | v24.22.0 |
-| npm | ✅ instalado | 11.19.1 — **en PowerShell usar `npm.cmd`** (la política de ejecución bloquea `npm.ps1`); o `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Angular CLI | ❌ no instalado | Instalar con `npm.cmd install -g @angular/cli@22` (coherente con la app ya generada en 22.2.x) |
-| Docker Desktop | ✅ instalado y corriendo | Engine 29.9.1, Compose v5.6.0 — **`docker` no está en el PATH de esta sesión**: usar `$env:PATH += "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin"` o reabrir la terminal |
-| ngrok | ❌ no instalado | Definir si va como servicio del compose (imagen `ngrok/ngrok`) o binario local — ver Fase 7 |
-| Git | ✅ | rama `main`, árbol limpio, 3 commits, `origin` configurado |
+| npm | ✅ instalado | 11.19.1 |
+| Angular CLI | ➖ no hace falta | Se usa la versión local de `node_modules` (22.2.3) vía `npm run build` / `npm start` |
+| Docker | ✅ corriendo | El grupo `docker` no está cargado en esta shell: encadenar con `sg docker -c "..."` |
+| ngrok | ✅ integrado | Dos servicios en el compose (`ngrok-api` / `ngrok-app`), imagen `ngrok/ngrok`; la URL pública es estática por cuenta |
+| Chrome | ✅ disponible | `google-chrome --headless=new` para verificar el render y la consola sin abrir el navegador |
+| Git | ✅ | rama `main`, e `origin` configurado; hay trabajo de la bandeja sin commitear |
 
 **Discrepancias corregidas (20/10/2026):**
 - ✅ `AGENTS.md` actualizado: ya no dice "sin commits todavía" (hay 6) y refleja el `.slnx` con proyecto.
 - ✅ `Program.cs` sin `WeatherForecast`; `encode-api.http` actualizado a los endpoints reales.
 - ✅ Namespaces del dominio normalizados a `EncodeAssistant.EncodeApi.*`; `RootNamespace` del csproj corregido.
 - ✅ `EncodeAssistant.slnx` ahora referencia `encode-api`.
+- ✅ `.dockerignore` agregado en el contexto del frontend (`encondechatapp/`).
 
 **Discrepancias pendientes (se resuelven en fases posteriores):**
 - Carpetas `Aplication/` (falta la "p") y services `MensajeService`/`UsuarioService` vacíos dentro del host: mover a las capas de Clean Architecture en Fase 1. Entidades borrador `Usuario`/`Operador` siguen sin uso.
@@ -109,17 +111,17 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] Commit inicial del andamiaje (`085b43b`).
 
 ### Fase 0.5 — Preparación del entorno (previo a código)
-- [ ] Instalar Angular CLI 22: `npm.cmd install -g @angular/cli@22` y verificar `ng version`.
-- [ ] Resolver PATH de Docker en la shell (reabrir terminal o agregar `resources\bin` al PATH).
-- [ ] Decidir y dejar instalado ngrok (servicio en compose recomendado vs. binario local).
-- [ ] Completar `.env` local con token real del bot (BotFather) y token de ngrok (no commitear).
+- [x] Angular CLI 22: **no hace falta instalarlo global**, `npm run build` / `npm start` usan la versión local de `node_modules` (22.2.3).
+- [x] Path de Docker: el grupo `docker` no está cargado en esta shell; se resuelve con `sg docker -c "..."`.
+- [x] ngrok ya decidido e integrado: dos servicios en el compose (`ngrok-api`, `ngrok-app`) con URL estática cada uno.
+- [x] `.env` local completo con el token real del bot y los dos authtoken de ngrok (gitignored).
 
 ### Fase 1 — Backend: estructura Clean Architecture
 - [ ] Crear proyectos `Encode.Domain`, `Encode.Application`, `Encode.Infrastructure`.
 - [ ] Registrar los 4 proyectos en `EncodeAssistant.slnx` y definir referencias entre capas.
 - [ ] Mover `Domain/Entities` y services al lugar correcto; renombrar `Aplication` → `Application` y unificar namespaces.
-- [ ] Eliminar código de plantilla sobrante (`WeatherForecast`, `encode-api.http` viejo).
-- [ ] Modelar entidades del dominio (`Usuario`/Contacto, `Mensaje`, `Conversación`, `Operador`) y casos de uso (ingesta de mensaje, listar contactos, historial, marcar leído, responder).
+- [ ] Sacar los services vacíos `MensajeService`/`UsuarioService` (o darles uso) y las entidades borrador `Usuario`/`Operador`.
+- [ ] Modelar entidades del dominio (`Usuario`/Contacto, `Mensaje`, `Conversación`, `Operador`) y casos de uso (ingesta de mensaje, listar contactos, historial, marcar leído, responder, eliminar conversación/bandeja).
 
 ### Fase 2 — Persistencia (SQL Server + EF Core)
 - [x] `DbContext` (`Persistence/EncodeDbContext.cs`) con las tablas `Contactos` y `Mensajes`, índices y borrado en cascada.
@@ -152,6 +154,8 @@ Aplica a todas las fases (revisar antes de cada commit):
 - [x] Conexión SignalR (`RealtimeService`), alta en vivo de mensajes y marcado de leídos al abrir.
 - [x] Estilo alineado a encodelabs.com.ar (tokens de `styles.css`).
 - [x] Runtime config: `/assets/config.json` generado por `docker-entrypoint.sh` desde `FRONTEND_API_BASE_URL` / `FRONTEND_SIGNALR_URL`; en desarrollo hay un `public/assets/config.json` con los valores locales.
+- [x] Gestión de conversaciones desde la UI: **Vaciar** (sidebar), papelera por tarjeta y **Eliminar** (cabecera del chat), contra `DELETE /api/v1/contacts` y `DELETE /api/v1/contacts/{chatId}`; sincronización entre pestañas con el evento SignalR `ConversacionEliminada`.
+- [x] Diálogo de confirmación (`shared/confirm-dialog/`) antes de cada borrado: `<dialog>` nativo con foco inicial en **Cancelar**, cierre por Escape/fondo y contador de conversaciones en el caso de "Vaciar".
 
 ### Fase 7 — Docker y exposición
 - [x] Dockerfile multi-stage para la API (.NET 10, usuario no root, `ASPNETCORE_URLS=http://+:8080`).
@@ -190,12 +194,15 @@ Aplica a todas las fases (revisar antes de cada commit):
 ## Estado actual (20/10/2026)
 
 - Git limpio en `main` con 6 commits (`085b43b` … `2c5872c`) e `origin` configurado (los cambios de esta fase están sin commitear).
-- **Backend:** `encode-api` (minimal API .NET 10). Endpoints: `GET /`, `GET /api/v1/health`, `POST /api/telegram/webhook` (persiste y emite), `GET /api/v1/contacts`, `GET /api/v1/contacts/{chatId}/messages`, `POST /api/v1/contacts/{chatId}/messages` (respuesta del operador), `POST /api/v1/contacts/{chatId}/read`, y el hub SignalR `/hubs/inbox`. Persistencia con EF Core + SQL Server (`EncodeDbContext`, entidades `Contacto`/`Mensaje`), hub en `Hubs/InboxHub.cs` y casos de uso en `Aplication/Services/BandejaService.cs`. Pendiente: separar capas (Fase 1) y RabbitMQ (Fase 3).
-- **Frontend:** `encondechatapp` (Angular 22 + SSR) con la bandeja funcional: sidebar de contactos (icono, preview, hora, badge de no leídos), panel de chat con historial en burbujas, autoscroll, envío de respuestas y actualización en vivo por SignalR. Servicios reales (`ContactService`, `ChatService`, `RealtimeService`) y config en runtime (`/assets/config.json`).
-- **Docker:** `docker compose up` levanta `sqlserver` + `api` + `frontend` + `ngrok-api` + `ngrok-app`. Verificado `/api/v1/health` 200, esquema creado en SQL Server y flujo de punta a punta (webhook → SQL → SignalR → bandeja). Faltan `rabbitmq`, healthchecks y `.dockerignore` del contexto de la API.
-- **Prueba de punta a punta (20/10/2026):** webhook local y vía ngrok → contacto y mensaje persistidos (`GET /api/v1/contacts`), marcado de leídos, respuesta del operador (201) y eventos `NuevoMensaje` / `ContactoActualizado` recibidos por un cliente SignalR real contra `http://localhost:5088/hubs/inbox`.
+- **Backend:** `encode-api` (minimal API .NET 10). Endpoints: `GET /`, `GET /api/v1/health`, `POST /api/telegram/webhook` (persiste y emite), `GET /api/v1/contacts`, `GET /api/v1/contacts/{chatId}/messages`, `POST /api/v1/contacts/{chatId}/messages` (respuesta del operador), `POST /api/v1/contacts/{chatId}/read`, `DELETE /api/v1/messages/{id}`, `DELETE /api/v1/contacts/{chatId}` (borra una conversación) y `DELETE /api/v1/contacts` (vacía la bandeja), más el hub SignalR `/hubs/inbox`. Persistencia con EF Core + SQL Server (`EncodeDbContext`, entidades `Contacto`/`Mensaje`, borrado en cascada de los mensajes al eliminar el contacto), hub en `Hubs/InboxHub.cs` y casos de uso en `Aplication/Services/BandejaService.cs`. Pendiente: separar capas (Fase 1) y RabbitMQ (Fase 3).
+- **Frontend:** `encondechatapp` (Angular 22 + SSR) con la bandeja funcional: sidebar de contactos (icono, preview, hora, badge de no leídos), panel de chat con historial en burbujas, autoscroll, envío de respuestas y actualización en vivo por SignalR. Borrado de conversaciones desde la UI: botón **Vaciar** en el sidebar, papelera por tarjeta y **Eliminar** en la cabecera del chat; las tres acciones emiten `ConversacionEliminada` para sincronizar las demás pestañas. Servicios reales (`ContactService`, `ChatService`, `RealtimeService`) y config en runtime (`/assets/config.json`). El interceptor `ngrokInterceptor` agrega el header `ngrok-skip-browser-warning` para evitar la página de advertencia de ngrok free (`ERR_NGROK_6024`).
+- **Docker:** `docker compose up` levanta `sqlserver` + `api` + `frontend` + `ngrok-api` + `ngrok-app`. Verificado `/api/v1/health` 200, esquema creado en SQL Server y flujo de punta a punta (webhook → SQL → SignalR → bandeja). Faltan `rabbitmq`, healthchecks y `.dockerignore` en el contexto de build de la API (el del frontend ya está).
+- **Prueba de punta a punta (20/10/2026):** webhook local y vía ngrok → contacto y mensaje persistidos (`GET /api/v1/contacts`), marcado de leídos, respuesta del operador (201) y eventos `NuevoMensaje` / `ContactoActualizado` recibidos por un cliente SignalR real contra `http://localhost:5088/hubs/inbox`. Borrado verificado con Chrome headless: `DELETE /api/v1/contacts/{chatId}` → 204 (404 si no existe), `DELETE /api/v1/contacts` → `{"eliminadas":n}`, la tarjeta desaparece del sidebar, se limpia la cabecera del chat y **Vaciar** deja el aviso de bandeja vacía.
+- **Diálogo de confirmación verificado (20/10/2026):** la papelera y **Vaciar** abren el modal sin borrar nada; **Cancelar** y **Escape** (evento de teclado real vía `Input.dispatchKeyEvent`) lo cierran dejando la lista intacta; al confirmar se llama a la API y la conversación desaparece. El foco inicial queda en **Cancelar**.
+- **Bug de render corregido (20/10/2026):** `Inbox` cargaba en `ngOnInit` con un guard de plataforma que cortaba también en el navegador, así que el sidebar se quedaba con el HTML prerenderizado. Ahora usa `afterNextRender` (y `AppConfigService.cargar` espera la hidratación para leer `config.json`).
 - **SQL Server:** el volumen se recreó hoy porque la contraseña guardada no coincidía con `SQLSERVER_SA_PASSWORD` del `.env`; no había bases de usuario, así que no se perdió información.
 - **ngrok (20/10/2026):** dos túneles públicos en Docker, uno por cuenta — `ngrok-api` → `https://wielder-removing-dilation.ngrok-free.dev` (host 5088) y `ngrok-app` → `https://trickle-batch-mollusk.ngrok-free.dev` (host 4200). Los dos authtoken (`NGROK_AUTHTOKEN_API` / `NGROK_AUTHTOKEN_APP`) verificados; respuestas 200 desde la URL pública. Variables en `.env.example`: `NGROK_DOMAIN_API/APP`, `PUBLIC_BASE_URL`, `FRONTEND_PUBLIC_URL`; `CORS_ALLOWED_ORIGINS` y las URLs de `FRONTEND_*` apuntan ya al túnel HTTPS de la API.
-- Angular CLI **no instalado**; ngrok **sí** (`3.39.11`) — se usa solo el agente de Docker. Docker funciona pero su PATH a veces no está en la sesión de shell actual (encadenar con `sg docker -c "..."`).
+  - **Ojo en el navegador:** ngrok free responde su página de advertencia (`ERR_NGROK_6024`) a las peticiones que vienen de un navegador. La app manda `ngrok-skip-browser-warning` (interceptor HTTP + `withUrl` de SignalR); sin eso el sidebar queda vacío y el navegador reporta un falso error de CORS.
+- **Entorno:** no hace falta Angular CLI global (se usa el de `node_modules`); el grupo `docker` no está cargado en la shell del agente (encadenar con `sg docker -c "..."`); hay Chrome headless para verificar el render y la consola.
 - Diagramas C4 (Nivel 1 y 2) creados en draw.io; pendientes de revisión contra la arquitectura final.
-- Pendiente: Fases 0.5, 1, 3, 5 y 8 (documentación/entregables), más los tests de la Fase 9.
+- Pendiente: Fases 1, 3, 5 y 8 (documentación/entregables), más los tests de la Fase 9. La Fase 0.5 quedó cubierta.

@@ -21,6 +21,12 @@ export class Sidebar {
   /** Emite el contacto elegido por el operador. */
   readonly seleccionar = output<Contact>();
 
+  /** Emite cuando el operador pide eliminar la conversación de un contacto. */
+  readonly eliminar = output<Contact>();
+
+  /** Emite cuando el operador pide vaciar la bandeja completa. */
+  readonly eliminarTodo = output<void>();
+
   estaSeleccionado(contacto: Contact): boolean {
     return this.seleccionadoId() !== null && String(this.seleccionadoId()) === String(contacto.id);
   }

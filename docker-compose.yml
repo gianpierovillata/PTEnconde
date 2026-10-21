@@ -1,5 +1,6 @@
 # =============================================================================
-# docker compose — levanta la API y SQL Server.
+# docker compose — levanta la API, SQL Server, el frontend Angular y los dos
+# túneles de ngrok.
 #
 # Uso:
 #   cp .env.example .env   # completar valores reales
@@ -31,7 +32,7 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: http://+:8080
       # Doble guion bajo = separador de sección en la configuración de .NET.
-      ConnectionStrings__SqlServer: "Server=${SQLSERVER_HOST:-sqlserver},1433;Database=${SQLSERVER_DB:-EncodeInbox};User Id=${SQLSERVER_USER:-sa};Password=${SQLSERVER_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__SqlServer: "Server=${SQLSERVER_HOST:-sqlserver},1433;Database=${SQLSERVER_DB:-EncodeDb};User Id=${SQLSERVER_USER:-sa};Password=${SQLSERVER_SA_PASSWORD};TrustServerCertificate=True"
       # URL pública (túnel ngrok de la API): la usará el registro automático
       # del webhook de Telegram (Fase 5).
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}

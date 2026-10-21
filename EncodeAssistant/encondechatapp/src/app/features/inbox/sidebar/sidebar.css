@@ -16,9 +16,36 @@
   margin-bottom: 4px;
 }
 
+.sidebar-header-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .sidebar-title {
   font-size: 13px;
   font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Botón "Vaciar": borra todas las conversaciones de la bandeja. */
+.sidebar-vaciar {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar-vaciar:hover {
+  background: var(--hover-bg);
+  border-color: var(--text-tertiary);
   color: var(--text-primary);
 }
 
@@ -46,18 +73,14 @@
   color: var(--text-tertiary);
 }
 
+/* Tarjeta = contenedor con el cuerpo clickeable y el botón de borrar. */
 .contact-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  align-items: stretch;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  width: 100%;
+  overflow: hidden;
 }
 
 .contact-card:hover {
@@ -67,6 +90,52 @@
 .contact-card--activo {
   background: var(--selected-bg);
   border-color: var(--text-primary);
+}
+
+/* Área clickeable que selecciona la conversación. */
+.contact-card-cuerpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Botón de borrar conversación: oculto hasta pasar el mouse por la tarjeta. */
+.contact-eliminar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.contact-eliminar svg {
+  width: 16px;
+  height: 16px;
+}
+
+.contact-card:hover .contact-eliminar,
+.contact-card--activo .contact-eliminar,
+.contact-eliminar:focus-visible {
+  opacity: 1;
+}
+
+.contact-eliminar:hover {
+  color: var(--unread-bg);
 }
 
 .contact-avatar {
