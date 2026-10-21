@@ -103,6 +103,10 @@ URLs resultantes (reemplazá los dominios por los tuyos):
 
 ## 4. Cómo probarla de punta a punta
 
+> Para el circuito completo como operador (usuario escribe al bot → bandeja → respuesta → Telegram real),
+> seguí la secuencia paso a paso de **[`Proyecto/PRUEBAS_MANUALES.md`](Proyecto/PRUEBAS_MANUALES.md)**, con
+> resultados esperados y las trampas conocidas (túnel caído, `/start`, ngrok free).
+
 Referencia rápida de la API (Swagger en `http://localhost:5088/swagger`):
 
 | Método | Ruta | Qué hace |
